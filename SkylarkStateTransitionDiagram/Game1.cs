@@ -48,7 +48,7 @@ public class Game1 : Game
     private Vector2 _dragOffset;
     private int _nextNodeId = 1;
     private string _editingLabel = string.Empty;
-    private string _status = "N: add  F2/ENTER: edit label  drag edge handles  SHIFT+drag: link  CTRL+S/O: save/load";
+    private string _status = "N: add  T: node kind  C: color  F2/ENTER: edit label  SHIFT+drag: link  CTRL+S/O: save/load";
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this)
@@ -177,10 +177,21 @@ public class Game1 : Game
             CreateSample();
             _status = "Sample diagram reset.";
         }
+        if (IsNewKeyPress(keyboard, Keys.T) && _selectedNode is not null)
+        {
+            ToggleNodeKind(_selectedNode);
+        }
         if (IsNewKeyPress(keyboard, Keys.C) && _selectedNode is not null)
         {
-            _selectedNode.ColorIndex = (_selectedNode.ColorIndex + 1) % Palette.Length;
-            _status = "Changed selected state color.";
+            if (_selectedNode.Kind == NodeKind.Normal)
+            {
+                _selectedNode.ColorIndex = (_selectedNode.ColorIndex + 1) % Palette.Length;
+                _status = "Changed selected state color.";
+            }
+            else
+            {
+                _status = "Start and end states use fixed black. Press T to return to normal.";
+            }
         }
         if (IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.S))
         {
@@ -250,7 +261,22 @@ public class Game1 : Game
         _editingLabel = string.Empty;
         _status = "Label edit canceled.";
     }
-    private void ToggleTransitionLabelSide(DiagramTransition transition)
+    private void ToggleNodeKind(DiagramNode node)
+    {
+        node.Kind = node.Kind switch
+        {
+            NodeKind.Normal => NodeKind.Start,
+            NodeKind.Start => NodeKind.End,
+            _ => NodeKind.Normal
+        };
+
+        _status = node.Kind switch
+        {
+            NodeKind.Start => "Changed selected state kind to start.",
+            NodeKind.End => "Changed selected state kind to end.",
+            _ => "Changed selected state kind to normal."
+        };
+    }    private void ToggleTransitionLabelSide(DiagramTransition transition)
     {
         transition.LabelSide = transition.LabelSide == 0 ? 1 : 0;
         _status = "Edge label side flipped. Horizontal edges use top/bottom; vertical edges use left/right.";
@@ -332,7 +358,8 @@ public class Game1 : Game
             _draggedHandleTransition = null;
             _draggedHandleKind = TransitionHandleKind.None;
         }
-    }    private void AddNode(Vector2 position)
+    }
+    private void AddNode(Vector2 position)
     {
         var node = new DiagramNode
         {
@@ -437,10 +464,12 @@ public class Game1 : Game
         AddNode(new Vector2(530, 220));
         AddNode(new Vector2(530, 480));
         AddNode(new Vector2(230, 480));
-        _nodes[0].Label = "着想";
+        _nodes[0].Label = "開始";
+        _nodes[0].Kind = NodeKind.Start;
         _nodes[1].Label = "下書き";
         _nodes[2].Label = "レビュー";
-        _nodes[3].Label = "完了";
+        _nodes[3].Label = "終了";
+        _nodes[3].Kind = NodeKind.End;
         AddTransition(_nodes[0].Id, _nodes[1].Id);
         AddTransition(_nodes[1].Id, _nodes[2].Id);
         AddTransition(_nodes[2].Id, _nodes[1].Id);
@@ -474,7 +503,7 @@ public class Game1 : Game
         _transitions[4].ControlPoint2 = new Vector2(760, 380);
         _selectedNode = null;
         _selectedTransition = null;
-        _status = "N: add  F2/ENTER: edit label  drag Bezier handles  SHIFT+drag: link  C: color  DEL: delete  CTRL+S/O: save/load";
+        _status = "N: add  T: node kind  C: color  F2/ENTER: edit label  drag Bezier handles  CTRL+S/O: save/load";
     }
     private DiagramNode? FindNodeAt(Vector2 position)
     {
@@ -690,14 +719,26 @@ public class Game1 : Game
     }
     private void DrawNode(DiagramNode node, bool selected)
     {
-        var fill = Palette[node.ColorIndex % Palette.Length];
+        var fill = node.Kind == NodeKind.Normal ? Palette[node.ColorIndex % Palette.Length] : new Color(5, 6, 8);
         DrawCircle(node.Position, DiagramNode.Radius + 4, selected ? new Color(255, 255, 255) : new Color(10, 12, 16));
         DrawCircle(node.Position, DiagramNode.Radius, fill);
-        DrawCircleOutline(node.Position, DiagramNode.Radius, new Color(15, 18, 24), 3f);
+
+        if (node.Kind == NodeKind.Normal)
+        {
+            DrawCircleOutline(node.Position, DiagramNode.Radius, new Color(15, 18, 24), 3f);
+        }
+        else
+        {
+            DrawCircleOutline(node.Position, DiagramNode.Radius, Color.White, node.Kind == NodeKind.Start ? 4f : 3f);
+            if (node.Kind == NodeKind.End)
+            {
+                DrawCircleOutline(node.Position, DiagramNode.Radius - 10f, Color.White, 3f);
+            }
+        }
+
         var label = node == _editingNode ? _editingLabel + "_" : node.Label;
         DrawNodeLabel(label, node.Position, node == _editingNode);
-    }
-    private void DrawNodeLabel(string label, Vector2 center, bool editing)
+    }    private void DrawNodeLabel(string label, Vector2 center, bool editing)
     {
         var texture = GetLabelTexture(label, editing);
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
@@ -968,6 +1009,13 @@ public sealed class DiagramNode
     public string Label { get; set; } = string.Empty;
     public Vector2 Position { get; set; }
     public int ColorIndex { get; set; }
+    public NodeKind Kind { get; set; }
+}
+public enum NodeKind
+{
+    Normal,
+    Start,
+    End
 }
 public sealed class DiagramTransition
 {
