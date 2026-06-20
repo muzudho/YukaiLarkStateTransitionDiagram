@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DrawingBitmap = System.Drawing.Bitmap;
 using DrawingBrushes = System.Drawing.Brushes;
 using DrawingColor = System.Drawing.Color;
@@ -45,6 +46,7 @@ public class Game1 : Game
     private DiagramTransition? _editingTransition;
     private DiagramTransition? _draggedHandleTransition;
     private TransitionHandleKind _draggedHandleKind;
+    private DiagramNode? _resizedNode;
     private Vector2 _dragOffset;
     private Vector2 _cameraOffset;
     private Vector2 _panStartMouse;
@@ -52,7 +54,7 @@ public class Game1 : Game
     private bool _isPanning;
     private int _nextNodeId = 1;
     private string _editingLabel = string.Empty;
-    private string _status = "N: add  T: node kind  C: color  F2/ENTER: edit label  drag empty area: pan  CTRL+S/O: save/load";
+    private string _status = "N: add  T: node kind  C: color  F2/ENTER: edit label  drag resize handle: size  drag empty area: pan  CTRL+S/O: save/load";
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this)
@@ -116,6 +118,10 @@ public class Game1 : Game
         foreach (var node in _nodes)
         {
             DrawNode(node, node == _selectedNode);
+        }
+        if (_selectedNode is not null)
+        {
+            DrawNodeResizeHandle(_selectedNode);
         }
         if (_selectedTransition is not null)
         {
@@ -232,6 +238,7 @@ public class Game1 : Game
         _editingTransition = null;
         _editingLabel = node.Label;
         _draggedNode = null;
+        _resizedNode = null;
         _linkSource = null;
         _status = "Editing state label: type Japanese text, ENTER commits, ESC cancels.";
     }
@@ -241,6 +248,7 @@ public class Game1 : Game
         _editingTransition = transition;
         _editingLabel = transition.Label;
         _draggedNode = null;
+        _resizedNode = null;
         _linkSource = null;
         _status = "Editing edge label: type Japanese text, ENTER commits, ESC cancels.";
     }
@@ -298,6 +306,19 @@ public class Game1 : Game
         if (leftPressed)
         {
             _isPanning = false;
+            _resizedNode = FindNodeResizeHandleAt(mousePosition);
+            if (_resizedNode is not null)
+            {
+                _selectedNode = _resizedNode;
+                _selectedTransition = null;
+                _draggedNode = null;
+                _draggedHandleTransition = null;
+                _draggedHandleKind = TransitionHandleKind.None;
+                UpdateNodeRadius(_resizedNode, mousePosition);
+                _status = "Resizing state. Radius snaps to half-grid units.";
+                return;
+            }
+
             var handle = FindTransitionHandleAt(mousePosition);
             if (handle.Transition is not null)
             {
@@ -349,6 +370,10 @@ public class Game1 : Game
         {
             _draggedNode.Position = mousePosition - _dragOffset;
         }
+        if (_resizedNode is not null && mouse.LeftButton == ButtonState.Pressed)
+        {
+            UpdateNodeRadius(_resizedNode, mousePosition);
+        }
         if (_isPanning && mouse.LeftButton == ButtonState.Pressed)
         {
             _cameraOffset = _panStartCamera + screenMousePosition - _panStartMouse;
@@ -375,7 +400,12 @@ public class Game1 : Game
             {
                 _status = "Edge handle moved. CTRL+S saves it.";
             }
+            if (_resizedNode is not null)
+            {
+                _status = $"State radius set to {_resizedNode.RadiusUnits} half-grid unit(s). CTRL+S saves it.";
+            }
             _draggedNode = null;
+            _resizedNode = null;
             _draggedHandleTransition = null;
             _draggedHandleKind = TransitionHandleKind.None;
             if (_isPanning)
@@ -392,6 +422,7 @@ public class Game1 : Game
             Id = _nextNodeId++,
             Label = $"状態{_nextNodeId - 1}",
             Position = position,
+            RadiusUnits = DiagramNode.DefaultRadiusUnits,
             ColorIndex = (_nextNodeId - 2) % Palette.Length
         };
         _nodes.Add(node);
@@ -530,19 +561,38 @@ public class Game1 : Game
         _selectedNode = null;
         _selectedTransition = null;
         _cameraOffset = Vector2.Zero;
-        _status = "N: add  T: node kind  C: color  F2/ENTER: edit label  drag empty area: pan  CTRL+S/O: save/load";
+        _status = "N: add  T: node kind  C: color  F2/ENTER: edit label  drag resize handle: size  drag empty area: pan  CTRL+S/O: save/load";
     }
     private DiagramNode? FindNodeAt(Vector2 position)
     {
         for (var i = _nodes.Count - 1; i >= 0; i--)
         {
-            if (Vector2.Distance(_nodes[i].Position, position) <= DiagramNode.Radius)
+            if (Vector2.Distance(_nodes[i].Position, position) <= _nodes[i].Radius)
             {
                 return _nodes[i];
             }
         }
         return null;
     }
+    private DiagramNode? FindNodeResizeHandleAt(Vector2 position)
+    {
+        if (_selectedNode is null)
+        {
+            return null;
+        }
+        return Vector2.Distance(position, GetNodeResizeHandleCenter(_selectedNode)) <= 14f ? _selectedNode : null;
+    }
+
+    private static Vector2 GetNodeResizeHandleCenter(DiagramNode node)
+        => node.Position + new Vector2(node.Radius, node.Radius);
+
+    private void UpdateNodeRadius(DiagramNode node, Vector2 mousePosition)
+    {
+        var offset = mousePosition - node.Position;
+        var radius = MathF.Max(MathF.Abs(offset.X), MathF.Abs(offset.Y));
+        node.RadiusUnits = (int)MathF.Round(radius / DiagramNode.RadiusUnit);
+    }
+
     private DiagramTransition? FindTransitionAt(Vector2 position)
     {
         foreach (var transition in _transitions)
@@ -684,8 +734,8 @@ public class Game1 : Game
 
         var sourceAngle = transition.SourceAngle ?? AngleFromTo(source.Position, target.Position);
         var targetAngle = transition.TargetAngle ?? AngleFromTo(target.Position, source.Position);
-        start = PointOnCircle(source.Position, DiagramNode.Radius, sourceAngle);
-        end = PointOnCircle(target.Position, DiagramNode.Radius, targetAngle);
+        start = PointOnCircle(source.Position, source.Radius, sourceAngle);
+        end = PointOnCircle(target.Position, target.Radius, targetAngle);
         return true;
     }
 
@@ -708,8 +758,8 @@ public class Game1 : Game
                 return false;
             }
 
-            control1 = transition.ControlPoint1 ?? node.Position + new Vector2(DiagramNode.Radius * 2.5f, -DiagramNode.Radius * 2.2f);
-            control2 = transition.ControlPoint2 ?? node.Position + new Vector2(DiagramNode.Radius * 2.5f, DiagramNode.Radius * 2.2f);
+            control1 = transition.ControlPoint1 ?? node.Position + new Vector2(node.Radius * 2.5f, -node.Radius * 2.2f);
+            control2 = transition.ControlPoint2 ?? node.Position + new Vector2(node.Radius * 2.5f, node.Radius * 2.2f);
             return true;
         }
 
@@ -755,25 +805,34 @@ public class Game1 : Game
     private void DrawNode(DiagramNode node, bool selected)
     {
         var fill = node.Kind == NodeKind.Normal ? Palette[node.ColorIndex % Palette.Length] : new Color(5, 6, 8);
-        DrawCircle(node.Position, DiagramNode.Radius + 4, selected ? new Color(255, 255, 255) : new Color(10, 12, 16));
-        DrawCircle(node.Position, DiagramNode.Radius, fill);
+        DrawCircle(node.Position, node.Radius + 4, selected ? new Color(255, 255, 255) : new Color(10, 12, 16));
+        DrawCircle(node.Position, node.Radius, fill);
 
         if (node.Kind == NodeKind.Normal)
         {
-            DrawCircleOutline(node.Position, DiagramNode.Radius, new Color(15, 18, 24), 3f);
+            DrawCircleOutline(node.Position, node.Radius, new Color(15, 18, 24), 3f);
         }
         else
         {
-            DrawCircleOutline(node.Position, DiagramNode.Radius, Color.White, node.Kind == NodeKind.Start ? 4f : 3f);
+            DrawCircleOutline(node.Position, node.Radius, Color.White, node.Kind == NodeKind.Start ? 4f : 3f);
             if (node.Kind == NodeKind.End)
             {
-                DrawCircleOutline(node.Position, DiagramNode.Radius - 10f, Color.White, 3f);
+                DrawCircleOutline(node.Position, node.Radius - 10f, Color.White, 3f);
             }
         }
 
         var label = node == _editingNode ? _editingLabel + "_" : node.Label;
         DrawNodeLabel(label, node.Position, node == _editingNode);
-    }    private void DrawNodeLabel(string label, Vector2 center, bool editing)
+    }
+
+    private void DrawNodeResizeHandle(DiagramNode node)
+    {
+        var center = GetNodeResizeHandleCenter(node);
+        DrawLine(node.Position + new Vector2(node.Radius * 0.72f, node.Radius * 0.72f), center, new Color(255, 230, 120), 2f);
+        DrawHandle(center, new Color(255, 230, 120));
+    }
+
+    private void DrawNodeLabel(string label, Vector2 center, bool editing)
     {
         var texture = GetLabelTexture(label, editing);
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
@@ -1039,10 +1098,21 @@ public sealed class DiagramDocument
 }
 public sealed class DiagramNode
 {
-    public const float Radius = 62f;
+    public const float RadiusUnit = 20f;
+    public const int DefaultRadiusUnits = 3;
+    public const int MinRadiusUnits = 1;
+    public const int MaxRadiusUnits = 12;
+    private int _radiusUnits = DefaultRadiusUnits;
     public int Id { get; set; }
     public string Label { get; set; } = string.Empty;
     public Vector2 Position { get; set; }
+    public int RadiusUnits
+    {
+        get => Math.Clamp(_radiusUnits, MinRadiusUnits, MaxRadiusUnits);
+        set => _radiusUnits = Math.Clamp(value, MinRadiusUnits, MaxRadiusUnits);
+    }
+    [JsonIgnore]
+    public float Radius => RadiusUnits * RadiusUnit;
     public int ColorIndex { get; set; }
     public NodeKind Kind { get; set; }
 }
