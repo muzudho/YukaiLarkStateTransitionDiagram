@@ -92,8 +92,11 @@ public class Game1 : Game
     private bool _isPanning;
     private bool _isExportSelecting;
     private bool _exportSelectionDragging;
-    private Vector2 _exportSelectionStart;
-    private Vector2 _exportSelectionEnd;
+    private bool _hasExportSelection;
+    private Rectangle _exportSelectionRectangle;
+    private Rectangle _exportDragStartRectangle;
+    private Vector2 _exportDragStart;
+    private ExportSelectionDragMode _exportDragMode;
     private int _nextNodeId = 1;
     private string _editingLabel = string.Empty;
     private string _status = DefaultStatus;
@@ -304,6 +307,24 @@ public class Game1 : Game
         if (IsNewKeyPress(keyboard, Keys.Escape))
         {
             CancelPngExportSelection("PNG出力をキャンセルしました。");
+            return;
+        }
+
+        if (IsNewKeyPress(keyboard, Keys.Enter))
+        {
+            if (!_hasExportSelection || _exportSelectionRectangle.Width < 16 || _exportSelectionRectangle.Height < 16)
+            {
+                _status = "PNG出力範囲が小さすぎます。左ドラッグで範囲を作ってください。";
+                return;
+            }
+
+            if (SavePngSelection(_exportSelectionRectangle))
+            {
+                _isExportSelecting = false;
+                _exportSelectionDragging = false;
+                _hasExportSelection = false;
+                _exportDragMode = ExportSelectionDragMode.None;
+            }
         }
     }
 
@@ -315,31 +336,49 @@ public class Game1 : Game
 
         if (leftPressed)
         {
+            _exportDragStart = screenPosition;
+            _exportDragStartRectangle = _exportSelectionRectangle;
+            _exportDragMode = _hasExportSelection
+                ? HitTestExportSelection(screenPosition, _exportSelectionRectangle)
+                : ExportSelectionDragMode.New;
+            if (_exportDragMode == ExportSelectionDragMode.None)
+            {
+                _exportDragMode = ExportSelectionDragMode.New;
+                _hasExportSelection = false;
+            }
+
             _exportSelectionDragging = true;
-            _exportSelectionStart = screenPosition;
-            _exportSelectionEnd = screenPosition;
-            _status = "PNGにしたい範囲をドラッグしてください。Escでキャンセルできます。";
+            if (_exportDragMode == ExportSelectionDragMode.New)
+            {
+                _exportSelectionRectangle = new Rectangle((int)screenPosition.X, (int)screenPosition.Y, 0, 0);
+                _status = "PNG範囲を作成中です。離した後に四辺をドラッグで調整、Enterで撮影。";
+            }
+            else
+            {
+                _status = "PNG範囲を調整中です。四辺・角・内側ドラッグで調整、Enterで撮影。";
+            }
             return;
         }
 
         if (_exportSelectionDragging && mouse.LeftButton == ButtonState.Pressed)
         {
-            _exportSelectionEnd = screenPosition;
+            UpdateExportSelectionDrag(screenPosition);
         }
 
         if (leftReleased && _exportSelectionDragging)
         {
-            _exportSelectionEnd = screenPosition;
-            var selection = GetExportSelectionRectangle();
+            UpdateExportSelectionDrag(screenPosition);
             _exportSelectionDragging = false;
-            _isExportSelecting = false;
-            if (selection.Width < 16 || selection.Height < 16)
+            _exportDragMode = ExportSelectionDragMode.None;
+            if (_exportSelectionRectangle.Width < 16 || _exportSelectionRectangle.Height < 16)
             {
-                _status = "PNG出力範囲が小さすぎます。Ctrl+Pでもう一度指定してください。";
+                _hasExportSelection = false;
+                _status = "PNG出力範囲が小さすぎます。左ドラッグで範囲を作り直してください。";
                 return;
             }
 
-            SavePngSelection(selection);
+            _hasExportSelection = true;
+            _status = "PNG範囲を調整できます。四辺・角・内側をドラッグ、Enterで撮影、Escでキャンセル。";
         }
     }
 
@@ -347,37 +386,129 @@ public class Game1 : Game
     {
         _isExportSelecting = true;
         _exportSelectionDragging = false;
+        _hasExportSelection = false;
+        _exportSelectionRectangle = Rectangle.Empty;
+        _exportDragStartRectangle = Rectangle.Empty;
+        _exportDragMode = ExportSelectionDragMode.None;
         _draggedNode = null;
         _resizedNode = null;
         _draggedHandleTransition = null;
         _draggedHandleKind = TransitionHandleKind.None;
         _linkSource = null;
         _isPanning = false;
-        _status = "PNG出力モードです。書き出す範囲を左ドラッグしてください。Escでキャンセル。";
+        _status = "PNG出力モードです。左ドラッグで範囲作成、四辺を調整、Enterで撮影。Escでキャンセル。";
     }
 
     private void CancelPngExportSelection(string status)
     {
         _isExportSelecting = false;
         _exportSelectionDragging = false;
+        _hasExportSelection = false;
+        _exportDragMode = ExportSelectionDragMode.None;
         _status = status;
     }
 
     private Rectangle GetExportSelectionRectangle()
+        => _exportSelectionRectangle;
+
+    private void UpdateExportSelectionDrag(Vector2 screenPosition)
     {
-        var left = (int)MathF.Min(_exportSelectionStart.X, _exportSelectionEnd.X);
-        var top = (int)MathF.Min(_exportSelectionStart.Y, _exportSelectionEnd.Y);
-        var right = (int)MathF.Max(_exportSelectionStart.X, _exportSelectionEnd.X);
-        var bottom = (int)MathF.Max(_exportSelectionStart.Y, _exportSelectionEnd.Y);
-        var viewport = GraphicsDevice.Viewport;
-        left = Math.Clamp(left, 0, viewport.Width);
-        right = Math.Clamp(right, 0, viewport.Width);
-        top = Math.Clamp(top, 0, viewport.Height);
-        bottom = Math.Clamp(bottom, 0, viewport.Height);
-        return new Rectangle(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
+        var rectangle = _exportDragMode == ExportSelectionDragMode.New
+            ? RectangleFromPoints(_exportDragStart, screenPosition)
+            : ResizeExportSelection(_exportDragStartRectangle, _exportDragMode, screenPosition - _exportDragStart);
+        _exportSelectionRectangle = ClampExportSelectionRectangle(rectangle);
+        _hasExportSelection = _exportSelectionRectangle.Width >= 16 && _exportSelectionRectangle.Height >= 16;
     }
 
-    private void SavePngSelection(Rectangle selection)
+    private Rectangle ResizeExportSelection(Rectangle rectangle, ExportSelectionDragMode mode, Vector2 delta)
+    {
+        var left = rectangle.Left;
+        var top = rectangle.Top;
+        var right = rectangle.Right;
+        var bottom = rectangle.Bottom;
+        var dx = (int)MathF.Round(delta.X);
+        var dy = (int)MathF.Round(delta.Y);
+
+        if (mode == ExportSelectionDragMode.Move)
+        {
+            return ClampMovedExportSelection(new Rectangle(rectangle.X + dx, rectangle.Y + dy, rectangle.Width, rectangle.Height));
+        }
+
+        if (mode is ExportSelectionDragMode.Left or ExportSelectionDragMode.TopLeft or ExportSelectionDragMode.BottomLeft)
+        {
+            left += dx;
+        }
+        if (mode is ExportSelectionDragMode.Right or ExportSelectionDragMode.TopRight or ExportSelectionDragMode.BottomRight)
+        {
+            right += dx;
+        }
+        if (mode is ExportSelectionDragMode.Top or ExportSelectionDragMode.TopLeft or ExportSelectionDragMode.TopRight)
+        {
+            top += dy;
+        }
+        if (mode is ExportSelectionDragMode.Bottom or ExportSelectionDragMode.BottomLeft or ExportSelectionDragMode.BottomRight)
+        {
+            bottom += dy;
+        }
+
+        return RectangleFromEdges(left, top, right, bottom);
+    }
+
+    private Rectangle ClampMovedExportSelection(Rectangle rectangle)
+    {
+        var viewport = GraphicsDevice.Viewport;
+        var width = Math.Min(rectangle.Width, viewport.Width);
+        var height = Math.Min(rectangle.Height, viewport.Height);
+        var x = Math.Clamp(rectangle.X, 0, viewport.Width - width);
+        var y = Math.Clamp(rectangle.Y, 0, viewport.Height - height);
+        return new Rectangle(x, y, width, height);
+    }
+    private Rectangle ClampExportSelectionRectangle(Rectangle rectangle)
+    {
+        var viewport = GraphicsDevice.Viewport;
+        if (rectangle.Width < 0 || rectangle.Height < 0)
+        {
+            rectangle = RectangleFromEdges(rectangle.Left, rectangle.Top, rectangle.Right, rectangle.Bottom);
+        }
+
+        var left = Math.Clamp(rectangle.Left, 0, viewport.Width);
+        var top = Math.Clamp(rectangle.Top, 0, viewport.Height);
+        var right = Math.Clamp(rectangle.Right, 0, viewport.Width);
+        var bottom = Math.Clamp(rectangle.Bottom, 0, viewport.Height);
+        return RectangleFromEdges(left, top, right, bottom);
+    }
+
+    private static Rectangle RectangleFromPoints(Vector2 a, Vector2 b)
+        => RectangleFromEdges((int)MathF.Round(a.X), (int)MathF.Round(a.Y), (int)MathF.Round(b.X), (int)MathF.Round(b.Y));
+
+    private static Rectangle RectangleFromEdges(int left, int top, int right, int bottom)
+    {
+        var x = Math.Min(left, right);
+        var y = Math.Min(top, bottom);
+        return new Rectangle(x, y, Math.Abs(right - left), Math.Abs(bottom - top));
+    }
+
+    private static ExportSelectionDragMode HitTestExportSelection(Vector2 position, Rectangle rectangle)
+    {
+        const int edge = 12;
+        var x = (int)MathF.Round(position.X);
+        var y = (int)MathF.Round(position.Y);
+        var nearLeft = Math.Abs(x - rectangle.Left) <= edge && y >= rectangle.Top - edge && y <= rectangle.Bottom + edge;
+        var nearRight = Math.Abs(x - rectangle.Right) <= edge && y >= rectangle.Top - edge && y <= rectangle.Bottom + edge;
+        var nearTop = Math.Abs(y - rectangle.Top) <= edge && x >= rectangle.Left - edge && x <= rectangle.Right + edge;
+        var nearBottom = Math.Abs(y - rectangle.Bottom) <= edge && x >= rectangle.Left - edge && x <= rectangle.Right + edge;
+
+        if (nearLeft && nearTop) return ExportSelectionDragMode.TopLeft;
+        if (nearRight && nearTop) return ExportSelectionDragMode.TopRight;
+        if (nearLeft && nearBottom) return ExportSelectionDragMode.BottomLeft;
+        if (nearRight && nearBottom) return ExportSelectionDragMode.BottomRight;
+        if (nearLeft) return ExportSelectionDragMode.Left;
+        if (nearRight) return ExportSelectionDragMode.Right;
+        if (nearTop) return ExportSelectionDragMode.Top;
+        if (nearBottom) return ExportSelectionDragMode.Bottom;
+        return rectangle.Contains(x, y) ? ExportSelectionDragMode.Move : ExportSelectionDragMode.None;
+    }
+    private bool SavePngSelection(Rectangle selection)
     {
         var dialog = new SaveFileDialog
         {
@@ -391,12 +522,13 @@ public class Game1 : Game
         };
         if (dialog.ShowDialog() != true)
         {
-            _status = "PNG出力をキャンセルしました。";
-            return;
+            _status = "PNG出力をキャンセルしました。範囲調整に戻ります。";
+            return false;
         }
 
         ExportSelectionToPng(selection, dialog.FileName);
         _status = $"{Path.GetFileName(dialog.FileName)} をPNG出力しました。";
+        return true;
     }
 
     private void ExportSelectionToPng(Rectangle selection, string path)
@@ -1180,12 +1312,7 @@ public class Game1 : Game
 
     private void DrawExportSelectionOverlay()
     {
-        if (!_isExportSelecting)
-        {
-            return;
-        }
-
-        if (!_exportSelectionDragging)
+        if (!_isExportSelecting || (!_hasExportSelection && !_exportSelectionDragging))
         {
             return;
         }
@@ -1197,12 +1324,37 @@ public class Game1 : Game
         }
 
         DrawExportPhotoFrame(new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), rectangle, fillBackdrop: false, fillImageArea: false);
-
         DrawExportPhotoTop(rectangle);
-
         DrawScreenRectangleOutline(rectangle, new Color(255, 236, 150), 2);
+        DrawExportSelectionHandles(rectangle);
     }
 
+    private void DrawExportSelectionHandles(Rectangle rectangle)
+    {
+        var points = new[]
+        {
+            new Vector2(rectangle.Left, rectangle.Top),
+            new Vector2(rectangle.Left + rectangle.Width / 2f, rectangle.Top),
+            new Vector2(rectangle.Right, rectangle.Top),
+            new Vector2(rectangle.Right, rectangle.Top + rectangle.Height / 2f),
+            new Vector2(rectangle.Right, rectangle.Bottom),
+            new Vector2(rectangle.Left + rectangle.Width / 2f, rectangle.Bottom),
+            new Vector2(rectangle.Left, rectangle.Bottom),
+            new Vector2(rectangle.Left, rectangle.Top + rectangle.Height / 2f)
+        };
+
+        foreach (var point in points)
+        {
+            DrawScreenHandle(point);
+        }
+    }
+
+    private void DrawScreenHandle(Vector2 center)
+    {
+        var bounds = new Rectangle((int)MathF.Round(center.X) - 5, (int)MathF.Round(center.Y) - 5, 10, 10);
+        _spriteBatch.Draw(_pixel, bounds, new Color(255, 236, 150));
+        DrawScreenRectangleOutline(bounds, new Color(48, 38, 28), 1);
+    }
     private void DrawExportPhotoFrame(Rectangle canvas, Rectangle imageArea, bool fillBackdrop, bool fillImageArea)
     {
         if (fillBackdrop)
@@ -1791,6 +1943,20 @@ public sealed class DiagramTransition
     public float? TargetAngle { get; set; }
     public Vector2? ControlPoint1 { get; set; }
     public Vector2? ControlPoint2 { get; set; }
+}
+public enum ExportSelectionDragMode
+{
+    None,
+    New,
+    Move,
+    Left,
+    Right,
+    Top,
+    Bottom,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight
 }
 public sealed record TransitionHandleHit(DiagramTransition? Transition, TransitionHandleKind Kind);
 public enum TransitionHandleKind
