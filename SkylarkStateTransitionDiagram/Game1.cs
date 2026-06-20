@@ -1,4 +1,5 @@
 namespace SkylarkStateTransitionDiagram;
+using SkylarkStateTransitionDiagram.Theme;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,6 +38,7 @@ public class Game1 : Game
     private readonly List<DiagramTransition> _transitions = new();
     private readonly Dictionary<string, Texture2D> _labelTextureCache = new();
     private readonly Dictionary<string, Texture2D> _uiTextTextureCache = new();
+    private readonly IKeyCapTheme _keyCapTheme = KeyCapThemes.Current;
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
     private MouseState _previousMouse;
@@ -981,7 +983,28 @@ public class Game1 : Game
 
         var y = viewport.Height - 34;
         _spriteBatch.Draw(_pixel, new Rectangle(0, y, viewport.Width, 34), new Color(17, 19, 23, 210));
-        DrawUiText("Alt: 吸着なし / Tab: 遷移ラベル位置 / Delete: 削除 / 空白ドラッグ: 表示移動", new Vector2(12, y + 9), new Color(188, 201, 218), 14, false);
+
+        var position = new Vector2(12, y + 6);
+        position = DrawShortcutHint(position, "Alt", "吸着なし");
+        position = DrawHelpSeparator(position);
+        position = DrawShortcutHint(position, "Tab", "遷移ラベル位置");
+        position = DrawHelpSeparator(position);
+        position = DrawShortcutHint(position, "Delete", "削除");
+        position = DrawHelpSeparator(position);
+        DrawShortcutHint(position, "空白", "表示移動");
+    }
+
+    private Vector2 DrawShortcutHint(Vector2 position, string key, string description)
+    {
+        var x = DrawKeyCap(key, position);
+        x = DrawUiText(description, new Vector2(x + 6, position.Y + 3), _keyCapTheme.DescriptionTextColor, 14, false);
+        return new Vector2(x + 12, position.Y);
+    }
+
+    private Vector2 DrawHelpSeparator(Vector2 position)
+    {
+        var x = DrawUiText("/", new Vector2(position.X, position.Y + 3), _keyCapTheme.SeparatorTextColor, 14, false);
+        return new Vector2(x + 12, position.Y);
     }
 
     private string GetSelectionSummary()
@@ -1043,10 +1066,32 @@ public class Game1 : Game
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
         _spriteBatch.Draw(texture, position, Color.White);
     }
-    private void DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
+    private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
     {
         var texture = GetUiTextTexture(text, size, bold);
         _spriteBatch.Draw(texture, position, color);
+        return position.X + texture.Width;
+    }
+
+    private float DrawKeyCap(string text, Vector2 position)
+    {
+        var textTexture = GetUiTextTexture(text, _keyCapTheme.FontSize, true);
+        var width = Math.Max(_keyCapTheme.MinWidth, textTexture.Width + (_keyCapTheme.HorizontalPadding * 2));
+        var height = _keyCapTheme.Height;
+        var bounds = new Rectangle((int)position.X, (int)position.Y, width, height);
+
+        _spriteBatch.Draw(_pixel, bounds, _keyCapTheme.FaceColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, bounds.Width, 1), _keyCapTheme.TopEdgeColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, 1, bounds.Height), _keyCapTheme.TopEdgeColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Bottom - 2, bounds.Width, 2), _keyCapTheme.BottomEdgeColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.Right - 1, bounds.Y, 1, bounds.Height), _keyCapTheme.BottomEdgeColor);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X + 2, bounds.Y + 2, bounds.Width - 4, 1), _keyCapTheme.InnerHighlightColor);
+
+        var textPosition = new Vector2(
+            bounds.X + (bounds.Width - textTexture.Width) / 2f,
+            bounds.Y + (bounds.Height - textTexture.Height) / 2f);
+        _spriteBatch.Draw(textTexture, textPosition, _keyCapTheme.LabelTextColor);
+        return bounds.Right;
     }
 
     private Texture2D GetUiTextTexture(string text, float size, bool bold)
