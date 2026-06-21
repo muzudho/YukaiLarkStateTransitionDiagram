@@ -64,6 +64,21 @@ public sealed class NodeRenderer
     }
 
     /// <summary>
+    /// 作成前の開始ノードを薄く描画します。
+    /// </summary>
+    /// <param name="node">描画する仮ノード</param>
+    /// <param name="opacity">不透明度</param>
+    public void DrawStartNodeGhost(DiagramNode node, float opacity)
+    {
+        var alpha = MathHelper.Clamp(opacity, 0f, 1f);
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius + 8f, new Color(110, 185, 230) * (alpha * 0.32f));
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius + 4f, new Color(255, 255, 255) * (alpha * 0.34f));
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius, new Color(5, 6, 8) * (alpha * 0.46f));
+        _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 1f, Color.White * (alpha * 0.74f), 5f);
+        DrawNodeLabel(node.Label, node.Position, editing: false, Color.White * (alpha * 0.74f));
+    }
+
+    /// <summary>
     /// ノードのリサイズハンドルを描画します。
     /// </summary>
     /// <param name="node">描画するノード</param>
@@ -81,10 +96,13 @@ public sealed class NodeRenderer
     /// <param name="center">ラベルの中心座標</param>
     /// <param name="editing">編集中かどうか</param>
     private void DrawNodeLabel(string label, Vector2 center, bool editing)
+        => DrawNodeLabel(label, center, editing, Color.White);
+
+    private void DrawNodeLabel(string label, Vector2 center, bool editing, Color color)
     {
         var texture = _getLabelTexture(label, editing);
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
-        _spriteBatch.Draw(texture, position, Color.White);
+        _spriteBatch.Draw(texture, position, color);
     }
 
     /// <summary>

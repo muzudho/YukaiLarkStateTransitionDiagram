@@ -73,6 +73,12 @@ internal sealed class YukaiLarkAssistant
             _ => new Vector2(viewport.Width * 0.42f, viewport.Height * 0.45f)
         };
 
+    public bool ShouldDrawStartNodeGhost(YukaiLarkAssistantContext context)
+        => IsAssistReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateStartNode;
+
+    public static float GetAssistBobOffset(TimeSpan totalGameTime)
+        => MathF.Sin((float)totalGameTime.TotalSeconds * 8.5f) * 8f;
+
     public void NotifyAssistCompleted(YukaiLarkAssistKind kind)
     {
         _completedKind = kind;
@@ -106,7 +112,7 @@ internal sealed class YukaiLarkAssistant
         var source = new Rectangle(0, 0, mascotTexture.Width, (int)(mascotTexture.Height * 0.66f));
         var targetHeight = (int)MathF.Round(MascotTargetWidth * source.Height / (float)source.Width);
         var bob = assistKind != YukaiLarkAssistKind.None
-            ? MathF.Sin((float)totalGameTime.TotalSeconds * 8.5f) * 8f
+            ? GetAssistBobOffset(totalGameTime)
             : 0f;
         var target = new Rectangle(viewport.Width - MascotTargetWidth - 22, 178 + (int)MathF.Round(bob), MascotTargetWidth, targetHeight);
         MascotBounds = target;

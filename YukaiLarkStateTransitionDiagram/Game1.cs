@@ -171,7 +171,7 @@ public class Game1 : Game
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(_boardTheme.BackgroundColor);
-        DrawDiagramScene(GetViewMatrix(), includeInteraction: true);
+        DrawDiagramScene(GetViewMatrix(), includeInteraction: true, gameTime.TotalGameTime);
 
         _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
         _headerRenderer.DrawHeader(GraphicsDevice.Viewport, GetHeaderTitle(), _status, _boardTheme);
@@ -851,7 +851,7 @@ public class Game1 : Game
         GraphicsDevice.ScissorRectangle = imageArea;
         _spriteBatch.Begin(samplerState: SamplerState.LinearClamp, rasterizerState: scissorRasterizer, transformMatrix: exportTransform);
         DrawGrid(40, _boardTheme.GridColor, worldTopLeft, worldBottomRight);
-        DrawDiagramContent(includeInteraction: false);
+        DrawDiagramContent(includeInteraction: false, TimeSpan.Zero);
         _spriteBatch.End();
         GraphicsDevice.ScissorRectangle = previousScissor;
 
@@ -1619,15 +1619,15 @@ public class Game1 : Game
         }
     }
 
-    private void DrawDiagramScene(Matrix transformMatrix, bool includeInteraction)
+    private void DrawDiagramScene(Matrix transformMatrix, bool includeInteraction, TimeSpan totalGameTime)
     {
         _spriteBatch.Begin(samplerState: SamplerState.LinearClamp, transformMatrix: transformMatrix);
         DrawGrid(40, _boardTheme.GridColor);
-        DrawDiagramContent(includeInteraction);
+        DrawDiagramContent(includeInteraction, totalGameTime);
         _spriteBatch.End();
     }
 
-    private void DrawDiagramContent(bool includeInteraction)
+    private void DrawDiagramContent(bool includeInteraction, TimeSpan totalGameTime)
     {
         foreach (var transition in _transitions)
         {
@@ -1653,6 +1653,10 @@ public class Game1 : Game
                 _edgeRenderer.DrawLinkPreview(_linkSource.Position, ScreenToWorld(mouse.Position.ToVector2()));
             }
         }
+        if (includeInteraction)
+        {
+            DrawStartNodeGhost(totalGameTime);
+        }
         foreach (var node in _nodes)
         {
             _nodeRenderer.DrawNode(node, includeInteraction && node == _selectedNode, _editingNode, _editingLabel);
@@ -1668,6 +1672,29 @@ public class Game1 : Game
                 _edgeRenderer.DrawTransitionHandles(start, control1, control2, end);
             }
         }
+    }
+
+
+    private void DrawStartNodeGhost(TimeSpan totalGameTime)
+    {
+        var context = CreateAssistantContext();
+        if (!_yukaiLarkAssistant.ShouldDrawStartNodeGhost(context))
+        {
+            return;
+        }
+
+        var screenPosition = _yukaiLarkAssistant.GetNodeScreenPosition(GraphicsDevice.Viewport, YukaiLarkAssistKind.CreateStartNode);
+        var worldPosition = SnapToHalfGrid(ScreenToWorld(screenPosition));
+        var bob = YukaiLarkAssistant.GetAssistBobOffset(totalGameTime);
+        var ghostNode = new DiagramNode
+        {
+            Label = "開始",
+            Position = worldPosition + new Vector2(0f, bob),
+            RadiusUnits = DiagramNode.TerminalRadiusUnits,
+            ColorIndex = 0,
+            Kind = NodeKind.Start
+        };
+        _nodeRenderer.DrawStartNodeGhost(ghostNode, 1f);
     }
 
     private void DrawExportSelectionOverlay()
