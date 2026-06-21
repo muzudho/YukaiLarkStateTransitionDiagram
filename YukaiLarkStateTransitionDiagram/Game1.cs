@@ -1651,6 +1651,10 @@ public class Game1 : Game
         }
         if (includeInteraction)
         {
+            DrawTransitionEventGhost(totalGameTime);
+        }
+        if (includeInteraction)
+        {
             DrawHoverCue();
             if (_linkSource is not null)
             {
@@ -1749,6 +1753,24 @@ public class Game1 : Game
 
         var offset = new Vector2(0f, YukaiLarkAssistant.GetAssistBobOffset(totalGameTime));
         _edgeRenderer.DrawTransitionGhost(start + offset, control1 + offset, control2 + offset, end + offset, 1f);
+    }
+
+    private void DrawTransitionEventGhost(TimeSpan totalGameTime)
+    {
+        var context = CreateAssistantContext();
+        if (!_yukaiLarkAssistant.ShouldDrawTransitionEventGhost(context))
+        {
+            return;
+        }
+
+        var transition = _transitions.FirstOrDefault(t => string.IsNullOrWhiteSpace(t.Label));
+        if (transition is null || !TryGetTransitionGeometry(transition, out var start, out var control1, out var control2, out var end))
+        {
+            return;
+        }
+
+        var offset = new Vector2(0f, YukaiLarkAssistant.GetAssistBobOffset(totalGameTime));
+        _edgeRenderer.DrawTransitionEventGhost(transition, start + offset, control1 + offset, control2 + offset, end + offset, 1f);
     }
 
     private void DrawExportSelectionOverlay()

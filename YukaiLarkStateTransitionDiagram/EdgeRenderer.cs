@@ -139,16 +139,57 @@ public sealed class EdgeRenderer
         bool editing,
         string editingLabel)
     {
-        var label = editing ? editingLabel + "_" : transition.Label;
-        if (string.IsNullOrWhiteSpace(label) && !editing)
+        if (editing)
+        {
+            DrawTransitionEventEditor(transition, start, control1, control2, end, editingLabel, 1f);
+            return;
+        }
+
+        var label = transition.Label;
+        if (string.IsNullOrWhiteSpace(label))
         {
             return;
         }
 
-        var texture = _getLabelTexture(label, editing || selected);
+        var texture = _getLabelTexture(label, selected);
         var center = GetTransitionLabelCenter(start, control1, control2, end, transition.LabelSide, texture);
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
         var labelColor = selected ? Theme.SelectedTransitionLabelColor : Theme.TransitionLabelColor;
+        _spriteBatch.Draw(texture, position, labelColor);
+    }
+
+    /// <summary>
+    /// 作成前、または編集中のイベント入力欄を描画します。
+    /// </summary>
+    /// <param name="transition"></param>
+    /// <param name="start"></param>
+    /// <param name="control1"></param>
+    /// <param name="control2"></param>
+    /// <param name="end"></param>
+    /// <param name="opacity">不透明度</param>
+    public void DrawTransitionEventGhost(DiagramTransition transition, Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, float opacity)
+    {
+        DrawTransitionEventEditor(transition, start, control1, control2, end, string.Empty, opacity);
+    }
+
+    private void DrawTransitionEventEditor(
+        DiagramTransition transition,
+        Vector2 start,
+        Vector2 control1,
+        Vector2 control2,
+        Vector2 end,
+        string editingLabel,
+        float opacity)
+    {
+        var isEmpty = string.IsNullOrEmpty(editingLabel);
+        var displayLabel = isEmpty ? "イベント名_" : editingLabel + "_";
+        var texture = _getLabelTexture(displayLabel, true);
+        var center = GetTransitionLabelCenter(start, control1, control2, end, transition.LabelSide, texture);
+        var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
+        var alpha = MathHelper.Clamp(opacity, 0f, 1f);
+        var labelColor = isEmpty
+            ? Theme.SelectedTransitionLabelColor * (alpha * 0.62f)
+            : Theme.SelectedTransitionLabelColor * alpha;
         _spriteBatch.Draw(texture, position, labelColor);
     }
 
