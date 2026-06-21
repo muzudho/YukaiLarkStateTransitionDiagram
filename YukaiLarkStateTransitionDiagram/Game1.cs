@@ -1770,21 +1770,77 @@ public class Game1 : Game
         var texture = Texture2D.FromStream(GraphicsDevice, stream);
         var pixels = new Color[texture.Width * texture.Height];
         texture.GetData(pixels);
+
+        var backgroundPixels = FindConnectedWhiteBackgroundPixels(pixels, texture.Width, texture.Height);
         for (var i = 0; i < pixels.Length; i++)
         {
-            var pixel = pixels[i];
-            if (pixel.R > 245 && pixel.G > 245 && pixel.B > 245)
+            if (backgroundPixels[i])
             {
                 pixels[i] = Color.Transparent;
-            }
-            else if (pixel.R > 232 && pixel.G > 232 && pixel.B > 232)
-            {
-                pixels[i] = new Color(pixel.R, pixel.G, pixel.B, (byte)80);
             }
         }
         texture.SetData(pixels);
         return texture;
     }
+
+    private static bool[] FindConnectedWhiteBackgroundPixels(Color[] pixels, int width, int height)
+    {
+        var backgroundPixels = new bool[pixels.Length];
+        var queue = new Queue<int>();
+
+        for (var x = 0; x < width; x++)
+        {
+            EnqueueWhiteBackgroundPixel(x, 0);
+            EnqueueWhiteBackgroundPixel(x, height - 1);
+        }
+
+        for (var y = 1; y < height - 1; y++)
+        {
+            EnqueueWhiteBackgroundPixel(0, y);
+            EnqueueWhiteBackgroundPixel(width - 1, y);
+        }
+
+        while (queue.Count > 0)
+        {
+            var index = queue.Dequeue();
+            var x = index % width;
+            var y = index / width;
+
+            if (x > 0)
+            {
+                EnqueueWhiteBackgroundPixel(x - 1, y);
+            }
+            if (x < width - 1)
+            {
+                EnqueueWhiteBackgroundPixel(x + 1, y);
+            }
+            if (y > 0)
+            {
+                EnqueueWhiteBackgroundPixel(x, y - 1);
+            }
+            if (y < height - 1)
+            {
+                EnqueueWhiteBackgroundPixel(x, y + 1);
+            }
+        }
+
+        return backgroundPixels;
+
+        void EnqueueWhiteBackgroundPixel(int x, int y)
+        {
+            var index = y * width + x;
+            if (backgroundPixels[index] || !IsWhiteBackgroundPixel(pixels[index]))
+            {
+                return;
+            }
+
+            backgroundPixels[index] = true;
+            queue.Enqueue(index);
+        }
+    }
+
+    private static bool IsWhiteBackgroundPixel(Color pixel)
+        => pixel.A > 0 && pixel.R > 232 && pixel.G > 232 && pixel.B > 232;
 
     private void DrawYukaiLarkMascot(Viewport viewport, TimeSpan totalGameTime)
     {
