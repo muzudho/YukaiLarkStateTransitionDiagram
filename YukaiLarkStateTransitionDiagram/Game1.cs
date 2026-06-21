@@ -2317,12 +2317,14 @@ public sealed record BoardTheme(
         ? WithAlpha(PhotoPaperColor, 220)
         : WithAlpha(Blend(BackgroundColor, Color.Black, 0.14f), 218);
 
-    public Color AssistantBubbleColor => WithAlpha(PhotoPaperColor, 236);
-    public Color AssistantBubbleBorderColor => WithAlpha(PinColor, 220);
-    public Color AssistantCompletedBubbleBorderColor => WithAlpha(PhotoEdgeColor, 230);
-    public Color AssistantTitleTextColor => IsLightBackground ? TransitionLabelColor : Blend(TransitionLabelColor, Color.Black, 0.12f);
-    public Color AssistantBodyTextColor => IsLightBackground ? PanelSecondaryTextColor : Blend(TransitionLabelColor, BackgroundColor, 0.16f);
-    public Color AssistantHintTextColor => IsLightBackground ? PanelMutedTextColor : Blend(TransitionLabelColor, BackgroundColor, 0.25f);
+    public Color AssistantBubbleColor => IsLightBackground
+        ? WithAlpha(PhotoPaperColor, 238)
+        : WithAlpha(Blend(BackgroundColor, GridColor, 0.58f), 238);
+    public Color AssistantBubbleBorderColor => WithAlpha(IsLightBackground ? PinColor : TransitionLineColor, 224);
+    public Color AssistantCompletedBubbleBorderColor => WithAlpha(IsLightBackground ? PhotoEdgeColor : SelectedTransitionLineColor, 232);
+    public Color AssistantTitleTextColor => IsLightBackground ? TransitionLabelColor : SelectedTransitionLabelColor;
+    public Color AssistantBodyTextColor => IsLightBackground ? PanelSecondaryTextColor : Blend(SelectedTransitionLabelColor, TransitionLabelColor, 0.28f);
+    public Color AssistantHintTextColor => IsLightBackground ? PanelMutedTextColor : Blend(SelectedTransitionLabelColor, BackgroundColor, 0.26f);
 
     private static float GetLuminance(Color color)
         => ((0.2126f * color.R) + (0.7152f * color.G) + (0.0722f * color.B)) / 255f;
