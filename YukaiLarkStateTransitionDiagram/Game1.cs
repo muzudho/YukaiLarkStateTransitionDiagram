@@ -1198,6 +1198,13 @@ public class Game1 : Game
         }
     }
 
+    /// <summary>
+    /// ［遷移］エッジの尻
+    /// </summary>
+    /// <param name="transition"></param>
+    /// <param name="start"></param>
+    /// <param name="end"></param>
+    /// <returns></returns>
     private bool TryGetTransitionEndpoints(DiagramTransition transition, out Vector2 start, out Vector2 end)
     {
         var source = FindNode(transition.SourceId);
@@ -1211,10 +1218,16 @@ public class Game1 : Game
 
         var sourceAngle = transition.SourceAngle ?? AngleFromTo(source.Position, target.Position);
         var targetAngle = transition.TargetAngle ?? AngleFromTo(target.Position, source.Position);
+
+        // 頭
         start = PointOnCircle(source.Position, source.Radius, sourceAngle);
-        end = PointOnCircle(target.Position, target.Radius, targetAngle);
+
+        // 尻
+        end = PointOnCircle(target.Position, target.Radius + TransitionHeadPadding, targetAngle);
         return true;
     }
+
+    private const float TransitionHeadPadding = 6f;
 
     private bool TryGetTransitionGeometry(DiagramTransition transition, out Vector2 start, out Vector2 control1, out Vector2 control2, out Vector2 end)
     {

@@ -183,7 +183,12 @@ public sealed class EdgeRenderer
         }
 
         var tangent = CubicBezierTangent(start, control1, control2, end, 1f);
-        DrawArrowHead(end, tangent, color, thickness);
+
+        // 矢終尻の位置
+        var arrowEndLocation = end;
+
+        // 矢終を描く。
+        DrawArrowHead(arrowEndLocation, tangent, color, thickness);
     }
 
     /// <summary>
@@ -195,12 +200,15 @@ public sealed class EdgeRenderer
     /// <param name="thickness"></param>
     private void DrawArrow(Vector2 start, Vector2 end, Color color, float thickness)
     {
+        // 矢印の線を描く
         _primitiveRenderer.DrawLine(start, end, color, thickness);
+
+        // 矢終を描く
         var direction = Vector2.Normalize(end - start);
-        var normal = new Vector2(-direction.Y, direction.X);
-        var tip = end;
-        _primitiveRenderer.DrawLine(tip, tip - direction * 18 + normal * 8, color, thickness);
-        _primitiveRenderer.DrawLine(tip, tip - direction * 18 - normal * 8, color, thickness);
+        var arrowEndLocation = end;
+
+        // 矢印の頭の左右の羽を描く
+        DrawSymmetricArrowHead(arrowEndLocation, direction, color, thickness);
     }
 
     /// <summary>
@@ -212,15 +220,47 @@ public sealed class EdgeRenderer
     /// <param name="thickness"></param>
     private void DrawArrowHead(Vector2 tip, Vector2 tangent, Color color, float thickness)
     {
-        if (tangent.LengthSquared() <= 0.01f)
-        {
-            return;
-        }
+        if (tangent.LengthSquared() <= 0.01f) return;
 
+        // 向き。
         var direction = Vector2.Normalize(tangent);
-        var normal = new Vector2(-direction.Y, direction.X);
-        _primitiveRenderer.DrawLine(tip, tip - direction * 18 + normal * 8, color, thickness);
-        _primitiveRenderer.DrawLine(tip, tip - direction * 18 - normal * 8, color, thickness);
+
+        // 矢印の頭の左右の羽を描く
+        DrawSymmetricArrowHead(tip, direction, color, thickness);
+    }
+
+    /// <summary>
+    /// 左右対称な矢印の羽を描く。
+    /// </summary>
+    /// <param name="tip"></param>
+    /// <param name="direction"></param>
+    /// <param name="color"></param>
+    /// <param name="thickness"></param>
+    private void DrawSymmetricArrowHead(Vector2 tip, Vector2 direction, Color color, float thickness)
+    {
+        var wingLength = 18f;
+        var wingAngle = MathHelper.ToRadians(28f);
+        var leftWing = Rotate(direction, wingAngle) * wingLength;
+        var rightWing = Rotate(direction, -wingAngle) * wingLength;
+
+        // 左右の羽を描く
+        _primitiveRenderer.DrawLine(tip, tip - leftWing, color, thickness);
+        _primitiveRenderer.DrawLine(tip, tip - rightWing, color, thickness);
+    }
+
+    /// <summary>
+    /// ベクトルを回転する。
+    /// </summary>
+    /// <param name="vector"></param>
+    /// <param name="radians"></param>
+    /// <returns></returns>
+    private static Vector2 Rotate(Vector2 vector, float radians)
+    {
+        var cos = MathF.Cos(radians);
+        var sin = MathF.Sin(radians);
+        return new Vector2(
+            vector.X * cos - vector.Y * sin,
+            vector.X * sin + vector.Y * cos);
     }
 
     /// <summary>
