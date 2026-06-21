@@ -12,6 +12,7 @@ using YukaiLarkStateTransitionDiagram.Theme;
 public sealed class ShortcutKeyRenderer : IDisposable
 {
     private static readonly TimeSpan HelpPageDuration = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan HelpPageFadeDuration = TimeSpan.FromMilliseconds(350);
     private readonly GraphicsDevice _graphicsDevice;
     private readonly SpriteBatch _spriteBatch;
     private readonly Texture2D _pixel;
@@ -76,17 +77,66 @@ public sealed class ShortcutKeyRenderer : IDisposable
             return;
         }
 
-        var pageIndex = (int)(totalGameTime.TotalSeconds / HelpPageDuration.TotalSeconds) % pages.Length;
-        var page = pages[pageIndex];
+        var pageDurationSeconds = HelpPageDuration.TotalSeconds;
+        var fadeDurationSeconds = Math.Min(HelpPageFadeDuration.TotalSeconds, pageDurationSeconds / 2d);
+        var pageProgress = totalGameTime.TotalSeconds % pageDurationSeconds;
+        var pageIndex = (int)(totalGameTime.TotalSeconds / pageDurationSeconds) % pages.Length;
+        var nextPageIndex = (pageIndex + 1) % pages.Length;
+        var fadeProgress = 0d;
+        var currentAlpha = 1f;
+        var nextAlpha = 0f;
+
+        if (pages.Length > 1 && pageProgress >= pageDurationSeconds - fadeDurationSeconds)
+        {
+            fadeProgress = (pageProgress - (pageDurationSeconds - fadeDurationSeconds)) / fadeDurationSeconds;
+            currentAlpha = (float)(1d - fadeProgress);
+            nextAlpha = (float)fadeProgress;
+        }
+
         var position = new Vector2(12, y + 6);
+        position = DrawHelpPage(page: pages[pageIndex], position, currentAlpha);
+
+        if (nextAlpha > 0f)
+        {
+            DrawHelpPage(page: pages[nextPageIndex], position: new Vector2(12, y + 6), nextAlpha);
+        }
+
+        DrawHelpPageNumber(
+            viewport,
+            y,
+            pageIndex,
+            pages.Length,
+            currentAlpha,
+            nextAlpha,
+            nextPageIndex);
+    }
+
+    private Vector2 DrawHelpPage(HelpPage page, Vector2 position, float alpha)
+    {
         for (var i = 0; i < page.Hints.Length; i++)
         {
             var hint = page.Hints[i];
-            position = DrawShortcutHint(position, hint.Key, hint.Description);
+            position = DrawShortcutHint(position, hint.Key, hint.Description, alpha);
             if (i < page.Hints.Length - 1)
             {
-                position = DrawHelpSeparator(position);
+                position = DrawHelpSeparator(position, alpha);
             }
+        }
+
+        return position;
+    }
+
+    private void DrawHelpPageNumber(Viewport viewport, int y, int pageIndex, int pageCount, float currentAlpha, float nextAlpha, int nextPageIndex)
+    {
+        var currentText = $"({pageIndex + 1}/{pageCount})";
+        var currentTexture = GetUiTextTexture(currentText, 14, false);
+        var currentX = viewport.Width - currentTexture.Width - 12;
+        DrawUiText(currentText, new Vector2(currentX, y + 3), _keyCapTheme.SeparatorTextColor, 14, false, currentAlpha);
+
+        if (nextAlpha > 0f)
+        {
+            var nextText = $"({nextPageIndex + 1}/{pageCount})";
+            DrawUiText(nextText, new Vector2(currentX, y + 3), _keyCapTheme.SeparatorTextColor, 14, false, nextAlpha);
         }
     }
 
@@ -251,10 +301,10 @@ public sealed class ShortcutKeyRenderer : IDisposable
     /// <param name="key"></param>
     /// <param name="description"></param>
     /// <returns></returns>
-    private Vector2 DrawShortcutHint(Vector2 position, string key, string description)
+    private Vector2 DrawShortcutHint(Vector2 position, string key, string description, float alpha)
     {
-        var x = DrawKeyCap(key, position);
-        x = DrawUiText(description, new Vector2(x + 6, position.Y + 3), _keyCapTheme.DescriptionTextColor, 14, false);
+        var x = DrawKeyCap(key, position, alpha);
+        x = DrawUiText(description, new Vector2(x + 6, position.Y + 3), _keyCapTheme.DescriptionTextColor, 14, false, alpha);
         return new Vector2(x + 12, position.Y);
     }
 
@@ -263,9 +313,9 @@ public sealed class ShortcutKeyRenderer : IDisposable
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    private Vector2 DrawHelpSeparator(Vector2 position)
+    private Vector2 DrawHelpSeparator(Vector2 position, float alpha)
     {
-        var x = DrawUiText("/", new Vector2(position.X, position.Y + 3), _keyCapTheme.SeparatorTextColor, 14, false);
+        var x = DrawUiText("/", new Vector2(position.X, position.Y + 3), _keyCapTheme.SeparatorTextColor, 14, false, alpha);
         return new Vector2(x + 12, position.Y);
     }
 
@@ -275,24 +325,24 @@ public sealed class ShortcutKeyRenderer : IDisposable
     /// <param name="text">キーキャップに表示するテキスト</param>
     /// <param name="position">描画位置</param>
     /// <returns>描画後のX座標</returns>
-    private float DrawKeyCap(string text, Vector2 position)
+    private float DrawKeyCap(string text, Vector2 position, float alpha)
     {
         var textTexture = GetUiTextTexture(text, _keyCapTheme.FontSize, true);
         var width = Math.Max(_keyCapTheme.MinWidth, textTexture.Width + (_keyCapTheme.HorizontalPadding * 2));
         var height = _keyCapTheme.Height;
         var bounds = new Rectangle((int)position.X, (int)position.Y, width, height);
 
-        _spriteBatch.Draw(_pixel, bounds, _keyCapTheme.FaceColor);
-        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, bounds.Width, 1), _keyCapTheme.TopEdgeColor);
-        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, 1, bounds.Height), _keyCapTheme.TopEdgeColor);
-        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Bottom - 2, bounds.Width, 2), _keyCapTheme.BottomEdgeColor);
-        _spriteBatch.Draw(_pixel, new Rectangle(bounds.Right - 1, bounds.Y, 1, bounds.Height), _keyCapTheme.BottomEdgeColor);
-        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X + 2, bounds.Y + 2, bounds.Width - 4, 1), _keyCapTheme.InnerHighlightColor);
+        _spriteBatch.Draw(_pixel, bounds, WithAlpha(_keyCapTheme.FaceColor, alpha));
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, bounds.Width, 1), WithAlpha(_keyCapTheme.TopEdgeColor, alpha));
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, 1, bounds.Height), WithAlpha(_keyCapTheme.TopEdgeColor, alpha));
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Bottom - 2, bounds.Width, 2), WithAlpha(_keyCapTheme.BottomEdgeColor, alpha));
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.Right - 1, bounds.Y, 1, bounds.Height), WithAlpha(_keyCapTheme.BottomEdgeColor, alpha));
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X + 2, bounds.Y + 2, bounds.Width - 4, 1), WithAlpha(_keyCapTheme.InnerHighlightColor, alpha));
 
         var textPosition = new Vector2(
             bounds.X + (bounds.Width - textTexture.Width) / 2f,
             bounds.Y + (bounds.Height - textTexture.Height) / 2f);
-        _spriteBatch.Draw(textTexture, textPosition, _keyCapTheme.LabelTextColor);
+        _spriteBatch.Draw(textTexture, textPosition, WithAlpha(_keyCapTheme.LabelTextColor, alpha));
         return bounds.Right;
     }
 
@@ -305,11 +355,16 @@ public sealed class ShortcutKeyRenderer : IDisposable
     /// <param name="size"></param>
     /// <param name="bold"></param>
     /// <returns></returns>
-    private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
+    private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold, float alpha = 1f)
     {
         var texture = GetUiTextTexture(text, size, bold);
-        _spriteBatch.Draw(texture, position, color);
+        _spriteBatch.Draw(texture, position, WithAlpha(color, alpha));
         return position.X + texture.Width;
+    }
+
+    private static Color WithAlpha(Color color, float alpha)
+    {
+        return new Color(color.R, color.G, color.B, (byte)(Math.Clamp(alpha, 0f, 1f) * color.A));
     }
 
     /// <summary>
