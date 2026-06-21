@@ -1,6 +1,7 @@
 namespace YukaiLarkStateTransitionDiagram;
 
 using YukaiLarkStateTransitionDiagram.Theme;
+using YukaiLarkStateTransitionDiagram.Assistants;
 using YukaiLarkStateTransitionDiagram.Navigation;
 using YukaiLarkStateTransitionDiagram.Persistence;
 using System;
@@ -25,12 +26,6 @@ public class Game1 : Game
     private const int ExportPhotoPaperBottomPadding = 54;
     private const int ExportPhotoOuterBottomPadding = 10;
     private const string YukaiLarkMascotTexturePath = "Assets/BrandLogo/yukai-lark-logo.png";
-
-    /// <summary>
-    /// ［開始ノード作成アシスト］が起動するまでの秒数
-    /// </summary>
-    private const double StartNodeAssistWakeSeconds = 1.2;
-
     private static readonly Keys[] ThemeDigitKeys =
     [
         Keys.D0,
@@ -74,11 +69,7 @@ public class Game1 : Game
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
     private Texture2D? _yukaiLarkMascotTexture;
-
-    /// <summary>
-    /// ［ユカイラークマスコット］の描画領域
-    /// </summary>
-    private Rectangle _yukaiLarkMascotBounds;
+    private readonly YukaiLarkAssistant _yukaiLarkAssistant = new();
 
     private MouseState _previousMouse;
     private KeyboardState _previousKeyboard;
@@ -94,12 +85,6 @@ public class Game1 : Game
     private string? _currentFilePath;
     private DiagramDocument? _pendingHistorySnapshot;
     private bool _suppressHistory;
-
-    /// <summary>
-    /// ［開始ノード作成アシスト］が起動するまでの残り時間（秒）
-    /// </summary>
-    private double _startNodeAssistSeconds;
-
     private Vector2 _dragOffset;
     private Vector2 _cameraOffset;
     private Vector2 _panStartMouse;
@@ -153,7 +138,7 @@ public class Game1 : Game
         var mouse = Mouse.GetState();
 
         // ［開始ノード作成アシスト］の起動判定
-        UpdateStartNodeAssist(gameTime);
+        _status = _yukaiLarkAssistant.Update(gameTime, CreateAssistantContext(), _status, DefaultStatus);
 
         if (_isExportSelecting)
         {
@@ -223,17 +208,18 @@ public class Game1 : Game
         base.UnloadContent();
     }
     private bool IsEditingLabel => _editingNode is not null || _editingTransition is not null;
-    private bool IsStartNodeAssistReady => _startNodeAssistSeconds >= StartNodeAssistWakeSeconds;
 
-    private bool ShouldOfferStartNodeAssist
-        => _nodes.All(node => node.Kind != NodeKind.Start)
-            && !IsEditingLabel
-            && !_isExportSelecting
-            && !_isPanning
-            && _draggedNode is null
-            && _linkSource is null
-            && _draggedHandleTransition is null
-            && _resizedNode is null;
+    private YukaiLarkAssistantContext CreateAssistantContext()
+        => new(
+            _nodes.Any(node => node.Kind == NodeKind.Start),
+            !IsEditingLabel
+                && !_isExportSelecting
+                && !_isPanning
+                && _draggedNode is null
+                && _linkSource is null
+                && _draggedHandleTransition is null
+                && _resizedNode is null);
+
     private void OnTextInput(object? sender, TextInputEventArgs e)
     {
         if (!IsEditingLabel || char.IsControl(e.Character))
@@ -246,20 +232,6 @@ public class Game1 : Game
             return;
         }
         _editingLabel += e.Character;
-    }
-    private void UpdateStartNodeAssist(GameTime gameTime)
-    {
-        if (!ShouldOfferStartNodeAssist)
-        {
-            _startNodeAssistSeconds = 0;
-            return;
-        }
-
-        _startNodeAssistSeconds += gameTime.ElapsedGameTime.TotalSeconds;
-        if (IsStartNodeAssistReady && _status == DefaultStatus)
-        {
-            _status = "ユカイラーク: まず開始ノードを作れます。Enterか鳥をクリック。";
-        }
     }
     private void HandleKeyboard(KeyboardState keyboard, MouseState mouse)
     {
@@ -312,7 +284,7 @@ public class Game1 : Game
             ApplyKeyCapTheme(themeIndex);
             return;
         }
-        if (IsStartNodeAssistReady && IsNewKeyPress(keyboard, Keys.Enter))
+        if (_yukaiLarkAssistant.ShouldCreateStartNodeFromKeyboard(CreateAssistantContext(), keyboard, _previousKeyboard))
         {
             CreateStartNodeWithAssist();
             return;
@@ -979,7 +951,7 @@ public class Game1 : Game
         var snapNodes = !IsAltDown(keyboard);
         if (leftPressed)
         {
-            if (IsStartNodeAssistReady && _yukaiLarkMascotBounds.Contains(mouse.Position))
+            if (_yukaiLarkAssistant.ShouldCreateStartNodeFromMouse(CreateAssistantContext(), mouse.Position))
             {
                 CreateStartNodeWithAssist();
                 return;
@@ -1146,7 +1118,7 @@ public class Game1 : Game
             _selectedNode = node;
             _selectedTransition = null;
         });
-        _startNodeAssistSeconds = 0;
+        _yukaiLarkAssistant.Reset();
         _status = "開始ノードを作成しました。次はNで状態追加、Shift+ドラッグで遷移作成。";
     }
     private void AddTransition(int sourceId, int targetId)
@@ -1902,38 +1874,20 @@ public class Game1 : Game
 
     private void DrawYukaiLarkMascot(Viewport viewport, TimeSpan totalGameTime)
     {
-        _yukaiLarkMascotBounds = Rectangle.Empty;
-        if (_yukaiLarkMascotTexture is null || viewport.Width < 640 || viewport.Height < 420)
+        if (_yukaiLarkMascotTexture is null)
         {
             return;
         }
 
-        var source = new Rectangle(0, 0, _yukaiLarkMascotTexture.Width, (int)(_yukaiLarkMascotTexture.Height * 0.66f));
-        const int targetWidth = 176;
-        var targetHeight = (int)MathF.Round(targetWidth * source.Height / (float)source.Width);
-        var isOfferingAssist = ShouldOfferStartNodeAssist;
-        var bob = isOfferingAssist
-            ? MathF.Sin((float)totalGameTime.TotalSeconds * 8.5f) * 8f
-            : 0f;
-        var target = new Rectangle(viewport.Width - targetWidth - 22, 178 + (int)MathF.Round(bob), targetWidth, targetHeight);
-        _yukaiLarkMascotBounds = target;
-        _spriteBatch.Draw(_yukaiLarkMascotTexture, target, source, Color.White * 0.92f);
-
-        if (IsStartNodeAssistReady)
-        {
-            DrawStartNodeAssistBubble(target);
-        }
-    }
-
-    private void DrawStartNodeAssistBubble(Rectangle mascotBounds)
-    {
-        const int bubbleWidth = 318;
-        const int bubbleHeight = 72;
-        var bubble = new Rectangle(mascotBounds.X - bubbleWidth + 18, mascotBounds.Y + 22, bubbleWidth, bubbleHeight);
-        _spriteBatch.Draw(_pixel, bubble, new Color(255, 253, 239, 235));
-        DrawScreenRectangleOutline(bubble, new Color(83, 178, 176, 210), 2);
-        DrawUiText("開始ノードを作る？", new Vector2(bubble.X + 12, bubble.Y + 10), new Color(58, 45, 34), 17, true);
-        DrawUiText("Enter または鳥をクリック", new Vector2(bubble.X + 12, bubble.Y + 38), new Color(74, 86, 92), 15, false);
+        _yukaiLarkAssistant.Draw(
+            _spriteBatch,
+            _yukaiLarkMascotTexture,
+            _pixel,
+            viewport,
+            totalGameTime,
+            CreateAssistantContext(),
+            DrawScreenRectangleOutline,
+            DrawUiText);
     }
 
     private void DrawInspectorPanel()
