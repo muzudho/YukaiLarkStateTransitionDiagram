@@ -9,30 +9,21 @@ using Microsoft.Xna.Framework.Graphics;
 /// </summary>
 public sealed class NodeRenderer
 {
+    private readonly PrimitiveRenderer _primitiveRenderer;
     private readonly SpriteBatch _spriteBatch;
     private readonly Color[] _palette;
     private readonly Func<string, bool, Texture2D> _getLabelTexture;
-    private readonly Action<Vector2, float, Color> _drawCircle;
-    private readonly Action<Vector2, float, Color, float> _drawCircleOutline;
-    private readonly Action<Vector2, Vector2, Color, float> _drawLine;
-    private readonly Action<Vector2, Color> _drawHandle;
 
     public NodeRenderer(
+        PrimitiveRenderer primitiveRenderer,
         SpriteBatch spriteBatch,
         Color[] palette,
-        Func<string, bool, Texture2D> getLabelTexture,
-        Action<Vector2, float, Color> drawCircle,
-        Action<Vector2, float, Color, float> drawCircleOutline,
-        Action<Vector2, Vector2, Color, float> drawLine,
-        Action<Vector2, Color> drawHandle)
+        Func<string, bool, Texture2D> getLabelTexture)
     {
+        _primitiveRenderer = primitiveRenderer;
         _spriteBatch = spriteBatch;
         _palette = palette;
         _getLabelTexture = getLabelTexture;
-        _drawCircle = drawCircle;
-        _drawCircleOutline = drawCircleOutline;
-        _drawLine = drawLine;
-        _drawHandle = drawHandle;
     }
 
     /// <summary>
@@ -48,21 +39,21 @@ public sealed class NodeRenderer
             ? _palette[node.ColorIndex % _palette.Length]
             : new Color(5, 6, 8);
 
-        _drawCircle(node.Position, node.Radius + 4, selected ? new Color(255, 255, 255) : new Color(10, 12, 16));
-        _drawCircle(node.Position, node.Radius, fill);
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius + 4, selected ? new Color(255, 255, 255) : new Color(10, 12, 16));
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius, fill);
 
         // 通常ノード
         if (node.Kind == NodeKind.Normal)
         {
-            _drawCircleOutline(node.Position, node.Radius, new Color(15, 18, 24), 3f);
+            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius, new Color(15, 18, 24), 3f);
         }
         // 開始ノード、終了ノード
         else
         {
-            _drawCircleOutline(node.Position, node.Radius, Color.White, node.Kind == NodeKind.Start ? 4f : 3f);
+            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius, Color.White, node.Kind == NodeKind.Start ? 4f : 3f);
             if (node.Kind == NodeKind.End)
             {
-                _drawCircleOutline(node.Position, node.Radius - 10f, Color.White, 3f);
+                _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 10f, Color.White, 3f);
             }
         }
 
@@ -77,8 +68,8 @@ public sealed class NodeRenderer
     public void DrawNodeResizeHandle(DiagramNode node)
     {
         var center = GetNodeResizeHandleCenter(node);
-        _drawLine(node.Position + new Vector2(node.Radius * 0.72f, node.Radius * 0.72f), center, new Color(255, 230, 120), 2f);
-        _drawHandle(center, new Color(255, 230, 120));
+        _primitiveRenderer.DrawLine(node.Position + new Vector2(node.Radius * 0.72f, node.Radius * 0.72f), center, new Color(255, 230, 120), 2f);
+        _primitiveRenderer.DrawHandle(center, new Color(255, 230, 120));
     }
 
     /// <summary>

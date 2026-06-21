@@ -69,6 +69,7 @@ public class Game1 : Game
     private readonly List<DiagramTransition> _transitions = new();
     private readonly Dictionary<string, Texture2D> _labelTextureCache = new();
     private readonly Dictionary<string, Texture2D> _uiTextTextureCache = new();
+    private PrimitiveRenderer _primitiveRenderer = null!;
     private NodeRenderer _nodeRenderer = null!;
     private IKeyCapTheme _keyCapTheme = KeyCapThemes.Current;
     private BoardTheme _boardTheme = BoardThemes.ForKeyCapTheme(KeyCapThemes.Current);
@@ -126,7 +127,8 @@ public class Game1 : Game
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
-        _nodeRenderer = new NodeRenderer(_spriteBatch, Palette, GetLabelTexture, DrawCircle, DrawCircleOutline, DrawLine, DrawHandle);
+        _primitiveRenderer = new PrimitiveRenderer(_spriteBatch, _pixel);
+        _nodeRenderer = new NodeRenderer(_primitiveRenderer, _spriteBatch, Palette, GetLabelTexture);
     }
     protected override void Update(GameTime gameTime)
     {
@@ -1273,11 +1275,11 @@ public class Game1 : Game
         var endY = (int)MathF.Ceiling(bottomRight.Y / spacing) * spacing;
         for (var x = startX; x <= endX; x += spacing)
         {
-            DrawLine(new Vector2(x, topLeft.Y), new Vector2(x, bottomRight.Y), color, 1f);
+            _primitiveRenderer.DrawLine(new Vector2(x, topLeft.Y), new Vector2(x, bottomRight.Y), color, 1f);
         }
         for (var y = startY; y <= endY; y += spacing)
         {
-            DrawLine(new Vector2(topLeft.X, y), new Vector2(bottomRight.X, y), color, 1f);
+            _primitiveRenderer.DrawLine(new Vector2(topLeft.X, y), new Vector2(bottomRight.X, y), color, 1f);
         }
     }
     private void DrawHoverCue()
@@ -1302,7 +1304,7 @@ public class Game1 : Game
             };
             if (center != Vector2.Zero)
             {
-                DrawCircleOutline(center, 13f, new Color(255, 245, 170), 3f);
+                _primitiveRenderer.DrawCircleOutline(center, 13f, new Color(255, 245, 170), 3f);
             }
             return;
         }
@@ -1312,7 +1314,7 @@ public class Game1 : Game
         {
             if (node != _selectedNode)
             {
-                DrawCircleOutline(node.Position, node.Radius + 8f, new Color(130, 185, 230), 3f);
+                _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius + 8f, new Color(130, 185, 230), 3f);
             }
             return;
         }
@@ -1468,10 +1470,10 @@ public class Game1 : Game
 
     private void DrawPin(Vector2 center, Color color)
     {
-        DrawCircle(center + new Vector2(2, 3), 10f, new Color(20, 14, 12, 95));
-        DrawCircle(center, 9f, color);
-        DrawCircleOutline(center, 9f, new Color(80, 42, 36, 170), 2f);
-        DrawCircle(center - new Vector2(3, 3), 3f, new Color(255, 244, 220, 185));
+        _primitiveRenderer.DrawCircle(center + new Vector2(2, 3), 10f, new Color(20, 14, 12, 95));
+        _primitiveRenderer.DrawCircle(center, 9f, color);
+        _primitiveRenderer.DrawCircleOutline(center, 9f, new Color(80, 42, 36, 170), 2f);
+        _primitiveRenderer.DrawCircle(center - new Vector2(3, 3), 3f, new Color(255, 244, 220, 185));
     }
 
     private void DrawScreenRectangleOutline(Rectangle rectangle, Color color, int thickness)
@@ -1744,18 +1746,12 @@ public class Game1 : Game
             return;
         }
 
-        DrawLine(start, control1, new Color(95, 120, 145), 1f);
-        DrawLine(end, control2, new Color(95, 120, 145), 1f);
-        DrawHandle(start, new Color(255, 230, 120));
-        DrawHandle(end, new Color(255, 230, 120));
-        DrawHandle(control1, new Color(80, 190, 230));
-        DrawHandle(control2, new Color(80, 190, 230));
-    }
-
-    private void DrawHandle(Vector2 center, Color color)
-    {
-        DrawCircle(center, 8f, color);
-        DrawCircleOutline(center, 8f, new Color(20, 24, 30), 2f);
+        _primitiveRenderer.DrawLine(start, control1, new Color(95, 120, 145), 1f);
+        _primitiveRenderer.DrawLine(end, control2, new Color(95, 120, 145), 1f);
+        _primitiveRenderer.DrawHandle(start, new Color(255, 230, 120));
+        _primitiveRenderer.DrawHandle(end, new Color(255, 230, 120));
+        _primitiveRenderer.DrawHandle(control1, new Color(80, 190, 230));
+        _primitiveRenderer.DrawHandle(control2, new Color(80, 190, 230));
     }
 
     private void DrawTransitionLabel(DiagramTransition transition, Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, bool selected)
@@ -1792,7 +1788,7 @@ public class Game1 : Game
         {
             var t = i / (float)segments;
             var current = CubicBezier(start, control1, control2, end, t);
-            DrawLine(previous, current, color, thickness);
+            _primitiveRenderer.DrawLine(previous, current, color, thickness);
             previous = current;
         }
 
@@ -1809,8 +1805,8 @@ public class Game1 : Game
 
         var direction = Vector2.Normalize(tangent);
         var normal = new Vector2(-direction.Y, direction.X);
-        DrawLine(tip, tip - direction * 18 + normal * 8, color, thickness);
-        DrawLine(tip, tip - direction * 18 - normal * 8, color, thickness);
+        _primitiveRenderer.DrawLine(tip, tip - direction * 18 + normal * 8, color, thickness);
+        _primitiveRenderer.DrawLine(tip, tip - direction * 18 - normal * 8, color, thickness);
     }
 
     private static Vector2 CubicBezier(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, float t)
@@ -1831,42 +1827,12 @@ public class Game1 : Game
     }
     private void DrawArrow(Vector2 start, Vector2 end, Color color, float thickness)
     {
-        DrawLine(start, end, color, thickness);
+        _primitiveRenderer.DrawLine(start, end, color, thickness);
         var direction = Vector2.Normalize(end - start);
         var normal = new Vector2(-direction.Y, direction.X);
         var tip = end;
-        DrawLine(tip, tip - direction * 18 + normal * 8, color, thickness);
-        DrawLine(tip, tip - direction * 18 - normal * 8, color, thickness);
-    }
-    private void DrawLine(Vector2 start, Vector2 end, Color color, float thickness)
-    {
-        var delta = end - start;
-        var length = delta.Length();
-        if (length <= 0.01f)
-        {
-            return;
-        }
-        _spriteBatch.Draw(_pixel, start, null, color, (float)Math.Atan2(delta.Y, delta.X), Vector2.Zero, new Vector2(length, thickness), SpriteEffects.None, 0f);
-    }
-    private void DrawCircle(Vector2 center, float radius, Color color)
-    {
-        for (var y = -radius; y <= radius; y++)
-        {
-            var halfWidth = (float)Math.Sqrt(radius * radius - y * y);
-            _spriteBatch.Draw(_pixel, new Rectangle((int)(center.X - halfWidth), (int)(center.Y + y), (int)(halfWidth * 2), 1), color);
-        }
-    }
-    private void DrawCircleOutline(Vector2 center, float radius, Color color, float thickness)
-    {
-        const int segments = 64;
-        var previous = center + new Vector2(radius, 0);
-        for (var i = 1; i <= segments; i++)
-        {
-            var angle = MathHelper.TwoPi * i / segments;
-            var current = center + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius;
-            DrawLine(previous, current, color, thickness);
-            previous = current;
-        }
+        _primitiveRenderer.DrawLine(tip, tip - direction * 18 + normal * 8, color, thickness);
+        _primitiveRenderer.DrawLine(tip, tip - direction * 18 - normal * 8, color, thickness);
     }
     private void DrawText(string text, Vector2 position, Color color, int scale)
     {
