@@ -47,7 +47,7 @@ internal sealed class YukaiLarkAssistant
 
         _assistSeconds += gameTime.ElapsedGameTime.TotalSeconds;
         return IsAssistReady && (currentStatus == defaultStatus || IsAssistantStatus(currentStatus))
-            ? GetStatusText(nextKind)
+            ? GetStatusText(context, nextKind)
             : currentStatus;
     }
 
@@ -115,7 +115,7 @@ internal sealed class YukaiLarkAssistant
         }
         else if (IsAssistReady && assistKind != YukaiLarkAssistKind.None)
         {
-            DrawAssistBubble(spriteBatch, pixel, target, assistKind, theme, drawRectangleOutline, drawUiText);
+            DrawAssistBubble(spriteBatch, pixel, target, assistKind, context, theme, drawRectangleOutline, drawUiText);
         }
     }
 
@@ -147,18 +147,24 @@ internal sealed class YukaiLarkAssistant
             return YukaiLarkAssistKind.CreateTransition;
         }
 
+        if (context.HasMissingTransitionEvent)
+        {
+            return YukaiLarkAssistKind.AddTransitionEvent;
+        }
+
         return YukaiLarkAssistKind.None;
     }
 
     private static bool IsAssistantStatus(string status)
         => status.StartsWith("ユカイラーク:", StringComparison.Ordinal);
 
-    private static string GetStatusText(YukaiLarkAssistKind kind)
+    private static string GetStatusText(YukaiLarkAssistantContext context, YukaiLarkAssistKind kind)
         => kind switch
         {
             YukaiLarkAssistKind.CreateStartNode => "ユカイラーク: まず開始ノードを作れます。Enterか鳥をクリック。",
             YukaiLarkAssistKind.CreateStateNode => "ユカイラーク: 次の状態ノードを作れます。Enterか鳥をクリック。",
             YukaiLarkAssistKind.CreateTransition => "ユカイラーク: 開始から次の状態へ遷移を作れます。Enterか鳥をクリック。",
+            YukaiLarkAssistKind.AddTransitionEvent => $"ユカイラーク: {context.MissingTransitionEventSummary} 間の遷移にイベントがありません。Enterか鳥をクリック。",
             _ => string.Empty
         };
 
@@ -167,6 +173,7 @@ internal sealed class YukaiLarkAssistant
         Texture2D pixel,
         Rectangle mascotBounds,
         YukaiLarkAssistKind kind,
+        YukaiLarkAssistantContext context,
         BoardTheme theme,
         DrawRectangleOutline drawRectangleOutline,
         DrawUiText drawUiText)
@@ -174,19 +181,20 @@ internal sealed class YukaiLarkAssistant
         const int bubbleWidth = 338;
         const int bubbleHeight = 72;
         var bubble = new Rectangle(mascotBounds.X - bubbleWidth + 18, mascotBounds.Y + 22, bubbleWidth, bubbleHeight);
-        var (title, body) = GetBubbleText(kind);
+        var (title, body) = GetBubbleText(kind, context);
         spriteBatch.Draw(pixel, bubble, theme.AssistantBubbleColor);
         drawRectangleOutline(bubble, theme.AssistantBubbleBorderColor, 2);
         drawUiText(title, new Vector2(bubble.X + 12, bubble.Y + 10), theme.AssistantTitleTextColor, 17, true);
         drawUiText(body, new Vector2(bubble.X + 12, bubble.Y + 38), theme.AssistantBodyTextColor, 15, false);
     }
 
-    private static (string Title, string Body) GetBubbleText(YukaiLarkAssistKind kind)
+    private static (string Title, string Body) GetBubbleText(YukaiLarkAssistKind kind, YukaiLarkAssistantContext context)
         => kind switch
         {
             YukaiLarkAssistKind.CreateStartNode => ("開始ノードを作る？", "Enter または鳥をクリック"),
             YukaiLarkAssistKind.CreateStateNode => ("次の状態を作る？", "Enter または鳥をクリック"),
             YukaiLarkAssistKind.CreateTransition => ("遷移をつなぐ？", "Enter または鳥をクリック"),
+            YukaiLarkAssistKind.AddTransitionEvent => ("イベントを追加する？", $"{context.MissingTransitionEventSummary} 間の遷移"),
             _ => (string.Empty, string.Empty)
         };
 
@@ -216,18 +224,20 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.CreateStartNode => ("ユカイラークが作図しました", "開始ノードを追加し、開始種別にして選択しました。", "手動なら Nで状態追加、Tで種別変更です。"),
             YukaiLarkAssistKind.CreateStateNode => ("ユカイラークが作図しました", "次の状態ノードを追加し、選択しました。", "手動なら Nで状態追加、ドラッグで位置調整です。"),
             YukaiLarkAssistKind.CreateTransition => ("ユカイラークが作図しました", "開始ノードから次の状態へ遷移を作成しました。", "手動なら Shift+ドラッグで状態同士を接続します。"),
+            YukaiLarkAssistKind.AddTransitionEvent => ("ユカイラークが見つけました", "イベント未設定の遷移を選択しました。", "イベント名を入力して Enterで確定します。"),
             _ => (string.Empty, string.Empty, string.Empty)
         };
 }
 
-internal readonly record struct YukaiLarkAssistantContext(bool HasStartNode, int NodeCount, int TransitionCount, bool IsInteractionIdle);
+internal readonly record struct YukaiLarkAssistantContext(bool HasStartNode, int NodeCount, int TransitionCount, bool HasMissingTransitionEvent, string MissingTransitionEventSummary, bool IsInteractionIdle);
 
 internal enum YukaiLarkAssistKind
 {
     None,
     CreateStartNode,
     CreateStateNode,
-    CreateTransition
+    CreateTransition,
+    AddTransitionEvent
 }
 
 internal delegate void DrawRectangleOutline(Rectangle rectangle, Color color, int thickness);

@@ -211,10 +211,14 @@ public class Game1 : Game
     private bool IsEditingLabel => _editingNode is not null || _editingTransition is not null;
 
     private YukaiLarkAssistantContext CreateAssistantContext()
-        => new(
+    {
+        var missingTransitionEventSummary = GetMissingTransitionEventSummary();
+        return new YukaiLarkAssistantContext(
             _nodes.Any(node => node.Kind == NodeKind.Start),
             _nodes.Count,
             _transitions.Count,
+            !string.IsNullOrEmpty(missingTransitionEventSummary),
+            missingTransitionEventSummary,
             !IsEditingLabel
                 && !_isExportSelecting
                 && !_isPanning
@@ -222,6 +226,26 @@ public class Game1 : Game
                 && _linkSource is null
                 && _draggedHandleTransition is null
                 && _resizedNode is null);
+    }
+
+    private string GetMissingTransitionEventSummary()
+    {
+        var transition = _transitions.FirstOrDefault(t => string.IsNullOrWhiteSpace(t.Label));
+        if (transition is null)
+        {
+            return string.Empty;
+        }
+
+        var sourceLabel = GetNodeLabel(transition.SourceId);
+        var targetLabel = GetNodeLabel(transition.TargetId);
+        return $"{sourceLabel} と {targetLabel}";
+    }
+
+    private string GetNodeLabel(int nodeId)
+    {
+        var node = FindNode(nodeId);
+        return node is null || string.IsNullOrWhiteSpace(node.Label) ? $"状態{nodeId}" : node.Label;
+    }
 
     private void OnTextInput(object? sender, TextInputEventArgs e)
     {
@@ -1110,6 +1134,11 @@ public class Game1 : Game
         _nextNodeId = result.NextNodeId;
         _selectedNode = result.SelectedNode;
         _selectedTransition = result.SelectedTransition;
+        if (kind == YukaiLarkAssistKind.AddTransitionEvent && result.SelectedTransition is not null)
+        {
+            BeginLabelEdit(result.SelectedTransition);
+        }
+
         if (result.Completed)
         {
             _yukaiLarkAssistant.Reset();

@@ -36,6 +36,7 @@ internal static class YukaiLarkAssistOperations
             YukaiLarkAssistKind.CreateStartNode => CreateStartNode(operation),
             YukaiLarkAssistKind.CreateStateNode => CreateStateNode(operation),
             YukaiLarkAssistKind.CreateTransition => CreateTransition(operation),
+            YukaiLarkAssistKind.AddTransitionEvent => AddTransitionEvent(operation),
             _ => new YukaiLarkAssistOperationResult(operation.NextNodeId, null, null, string.Empty, false)
         };
 
@@ -95,6 +96,35 @@ internal static class YukaiLarkAssistOperations
             null,
             "状態ノードを作成しました。次は開始ノードから遷移をつなげます。",
             selectedNode is not null);
+    }
+
+    private static YukaiLarkAssistOperationResult AddTransitionEvent(YukaiLarkAssistOperation operation)
+    {
+        var transition = operation.Transitions.FirstOrDefault(t => string.IsNullOrWhiteSpace(t.Label));
+        if (transition is null)
+        {
+            return new YukaiLarkAssistOperationResult(
+                operation.NextNodeId,
+                null,
+                null,
+                "イベント未設定の遷移はありません。",
+                false);
+        }
+
+        var sourceLabel = GetNodeLabel(operation.Nodes, transition.SourceId);
+        var targetLabel = GetNodeLabel(operation.Nodes, transition.TargetId);
+        return new YukaiLarkAssistOperationResult(
+            operation.NextNodeId,
+            null,
+            transition,
+            $"{sourceLabel} と {targetLabel} 間の遷移イベントを入力中です。Enterで確定します。",
+            true);
+    }
+
+    private static string GetNodeLabel(IEnumerable<DiagramNode> nodes, int nodeId)
+    {
+        var node = nodes.FirstOrDefault(n => n.Id == nodeId);
+        return node is null || string.IsNullOrWhiteSpace(node.Label) ? $"状態{nodeId}" : node.Label;
     }
 
     private static YukaiLarkAssistOperationResult CreateTransition(YukaiLarkAssistOperation operation)
