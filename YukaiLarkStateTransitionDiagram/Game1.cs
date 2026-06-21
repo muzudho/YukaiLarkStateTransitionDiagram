@@ -979,17 +979,48 @@ public class Game1 : Game
         }
         CreateSample();
     }
+
+    /// <summary>
+    /// 新規ファイル作成
+    /// </summary>
     private void CreateNewDiagram()
     {
-        CreateSample();
+        ClearDiagram();
         _currentFilePath = null;
         SaveDiagramAs();
     }
-    private void CreateSample()
+
+    /// <summary>
+    /// ダイアグラムのクリアー
+    /// </summary>
+    private void ClearDiagram()
     {
         _nodes.Clear();
         _transitions.Clear();
         _nextNodeId = 1;
+        _selectedNode = null;
+        _selectedTransition = null;
+        _draggedNode = null;
+        _linkSource = null;
+        _editingNode = null;
+        _editingTransition = null;
+        _draggedHandleTransition = null;
+        _draggedHandleKind = TransitionHandleKind.None;
+        _resizedNode = null;
+        _editingLabel = string.Empty;
+        _cameraOffset = Vector2.Zero;
+        _isPanning = false;
+        _isExportSelecting = false;
+        _exportSelectionDragging = false;
+        _hasExportSelection = false;
+        _exportSelectionRectangle = Rectangle.Empty;
+        _exportDragStartRectangle = Rectangle.Empty;
+        _exportDragMode = ExportSelectionDragMode.New;
+        _status = DefaultStatus;
+    }
+    private void CreateSample()
+    {
+        ClearDiagram();
         AddNode(new Vector2(230, 220));
         AddNode(new Vector2(530, 220));
         AddNode(new Vector2(530, 480));
@@ -1033,7 +1064,6 @@ public class Game1 : Game
         _transitions[4].ControlPoint2 = new Vector2(760, 380);
         _selectedNode = null;
         _selectedTransition = null;
-        _cameraOffset = Vector2.Zero;
         _status = DefaultStatus;
     }
     private DiagramNode? FindNodeAt(Vector2 position)
