@@ -79,6 +79,25 @@ public sealed class NodeRenderer
     }
 
     /// <summary>
+    /// 作成前の通常ノードを薄く描画します。
+    /// </summary>
+    /// <param name="node">描画する仮ノード</param>
+    /// <param name="opacity">不透明度</param>
+    public void DrawStateNodeGhost(DiagramNode node, float opacity)
+    {
+        var alpha = MathHelper.Clamp(opacity, 0f, 1f);
+        var fill = _palette.Length > 0
+            ? _palette[node.ColorIndex % _palette.Length]
+            : new Color(60, 130, 220);
+
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius + 8f, fill * (alpha * 0.26f));
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius + 4f, new Color(255, 255, 255) * (alpha * 0.3f));
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius, fill * (alpha * 0.54f));
+        _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius, new Color(15, 18, 24) * (alpha * 0.72f), 3f);
+        DrawNodeLabel(node.Label, node.Position, editing: false, Color.White * (alpha * 0.78f));
+    }
+
+    /// <summary>
     /// ノードのリサイズハンドルを描画します。
     /// </summary>
     /// <param name="node">描画するノード</param>

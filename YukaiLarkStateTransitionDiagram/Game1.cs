@@ -1656,6 +1656,7 @@ public class Game1 : Game
         if (includeInteraction)
         {
             DrawStartNodeGhost(totalGameTime);
+            DrawStateNodeGhost(totalGameTime);
         }
         foreach (var node in _nodes)
         {
@@ -1695,6 +1696,29 @@ public class Game1 : Game
             Kind = NodeKind.Start
         };
         _nodeRenderer.DrawStartNodeGhost(ghostNode, 1f);
+    }
+
+    private void DrawStateNodeGhost(TimeSpan totalGameTime)
+    {
+        var context = CreateAssistantContext();
+        if (!_yukaiLarkAssistant.ShouldDrawStateNodeGhost(context))
+        {
+            return;
+        }
+
+        var nodeId = _nextNodeId;
+        var screenPosition = _yukaiLarkAssistant.GetNodeScreenPosition(GraphicsDevice.Viewport, YukaiLarkAssistKind.CreateStateNode);
+        var worldPosition = SnapToHalfGrid(ScreenToWorld(screenPosition));
+        var bob = YukaiLarkAssistant.GetAssistBobOffset(totalGameTime);
+        var ghostNode = new DiagramNode
+        {
+            Label = $"状態{nodeId}",
+            Position = worldPosition + new Vector2(0f, bob),
+            RadiusUnits = DiagramNode.DefaultRadiusUnits,
+            ColorIndex = (nodeId - 1) % Palette.Length,
+            Kind = NodeKind.Normal
+        };
+        _nodeRenderer.DrawStateNodeGhost(ghostNode, 1f);
     }
 
     private void DrawExportSelectionOverlay()
