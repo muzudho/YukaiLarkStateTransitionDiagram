@@ -62,7 +62,7 @@ public class Game1 : Game
     private EdgeRenderer _edgeRenderer = null!;
     private NodeRenderer _nodeRenderer = null!;
     private HeaderRenderer _headerRenderer = null!;
-    private PropertyWindowRenderer _propertyWindowRenderer = null!;
+    private InspectorPanelRenderer _inspectorPanelRenderer = null!;
     private ShortcutKeyRenderer _shortcutKeyRenderer = null!;
     private IKeyCapTheme _keyCapTheme = KeyCapThemes.Current;
     private BoardTheme _boardTheme = BoardThemes.ForKeyCapTheme(KeyCapThemes.Current);
@@ -130,7 +130,7 @@ public class Game1 : Game
         _primitiveRenderer = new PrimitiveRenderer(_spriteBatch, _pixel);
         _edgeRenderer = new EdgeRenderer(_primitiveRenderer, _spriteBatch, GetLabelTexture, _boardTheme);
         _headerRenderer = new HeaderRenderer(GraphicsDevice, _spriteBatch, _pixel);
-        _propertyWindowRenderer = new PropertyWindowRenderer(GraphicsDevice, _spriteBatch, _pixel);
+        _inspectorPanelRenderer = new InspectorPanelRenderer(GraphicsDevice, _spriteBatch, _pixel);
         _shortcutKeyRenderer = new ShortcutKeyRenderer(GraphicsDevice, _spriteBatch, _pixel, _keyCapTheme, _boardTheme);
         _nodeRenderer = new NodeRenderer(_primitiveRenderer, _spriteBatch, Palette, GetLabelTexture);
         _yukaiLarkMascotTexture = LoadTextureWithTransparentWhite(YukaiLarkMascotTexturePath);
@@ -179,7 +179,7 @@ public class Game1 : Game
         // ［開始ノード作成アシスト］の描画
         DrawYukaiLarkMascot(GraphicsDevice.Viewport, gameTime.TotalGameTime);
 
-        DrawPropertyWindow();
+        DrawInspectorPanel();
         _shortcutKeyRenderer.DrawBottomHelp(
             GraphicsDevice.Viewport,
             gameTime.TotalGameTime,
@@ -207,7 +207,7 @@ public class Game1 : Game
         _yukaiLarkMascotTexture?.Dispose();
         _yukaiLarkMascotTexture = null;
         _headerRenderer?.Dispose();
-        _propertyWindowRenderer?.Dispose();
+        _inspectorPanelRenderer?.Dispose();
         _shortcutKeyRenderer?.Dispose();
         base.UnloadContent();
     }
@@ -1898,9 +1898,9 @@ public class Game1 : Game
             DrawUiText);
     }
 
-    private void DrawPropertyWindow()
+    private void DrawInspectorPanel()
     {
-        _propertyWindowRenderer.DrawPropertyWindow(
+        _inspectorPanelRenderer.DrawInspectorPanel(
             GraphicsDevice.Viewport,
             _nodes.Count,
             _transitions.Count,

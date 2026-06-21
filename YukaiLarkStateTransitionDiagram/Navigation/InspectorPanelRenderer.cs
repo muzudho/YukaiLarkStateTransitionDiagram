@@ -6,9 +6,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 /// <summary>
-/// 画面右上のプロパティウィンドウの描画
+/// 画面右上のインスペクターパネルの描画
 /// </summary>
-public sealed class PropertyWindowRenderer : IDisposable
+public sealed class InspectorPanelRenderer : IDisposable
 {
     private const int MinimumVisibleWidth = 560;
     private const int PanelWidth = 290;
@@ -21,7 +21,7 @@ public sealed class PropertyWindowRenderer : IDisposable
     private readonly Texture2D _pixel;
     private readonly Dictionary<string, Texture2D> _uiTextTextureCache = new();
 
-    public PropertyWindowRenderer(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, Texture2D pixel)
+    public InspectorPanelRenderer(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch, Texture2D pixel)
     {
         _graphicsDevice = graphicsDevice;
         _spriteBatch = spriteBatch;
@@ -38,7 +38,7 @@ public sealed class PropertyWindowRenderer : IDisposable
         _uiTextTextureCache.Clear();
     }
 
-    public void DrawPropertyWindow(
+    public void DrawInspectorPanel(
         Viewport viewport,
         int nodeCount,
         int transitionCount,
@@ -82,3 +82,4 @@ public sealed class PropertyWindowRenderer : IDisposable
         return texture;
     }
 }
+
