@@ -1671,6 +1671,9 @@ public class Game1 : Game
 }
 public sealed class DiagramDocument
 {
+    public const int CurrentFormatVersion = 1;
+
+    public int FormatVersion { get; set; } = CurrentFormatVersion;
     public List<DiagramNode> Nodes { get; set; } = new();
     public List<DiagramTransition> Transitions { get; set; } = new();
 }

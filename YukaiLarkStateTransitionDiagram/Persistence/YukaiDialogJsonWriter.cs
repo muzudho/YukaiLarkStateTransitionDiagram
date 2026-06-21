@@ -10,6 +10,7 @@ public static class YukaiDialogJsonWriter
 
     public static void Write(string path, DiagramDocument document)
     {
+        document.FormatVersion = DiagramDocument.CurrentFormatVersion;
         var json = JsonSerializer.Serialize(document, YukaiDialogJsonSerializer.Options);
         File.WriteAllText(path, json, Utf8NoBom);
     }
