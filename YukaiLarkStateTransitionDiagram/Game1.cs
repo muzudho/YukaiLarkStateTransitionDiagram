@@ -14,6 +14,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 public class Game1 : Game
 {
+    private const string AppTitle = "YukaiLark State Transition Diagram";
     private const string SaveFileName = "diagram.json";
     private const int ExportPhotoImageMargin = 34;
     private const int ExportPhotoPaperSidePadding = 16;
@@ -99,7 +100,7 @@ public class Game1 : Game
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
         Window.AllowUserResizing = true;
-        Window.Title = "YukaiLark State Transition Diagram";
+        Window.Title = AppTitle;
         Window.TextInput += OnTextInput;
     }
     protected override void Initialize()
@@ -153,7 +154,7 @@ public class Game1 : Game
         DrawDiagramScene(GetViewMatrix(), includeInteraction: true);
 
         _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-        _headerRenderer.DrawHeader(GraphicsDevice.Viewport, _status);
+        _headerRenderer.DrawHeader(GraphicsDevice.Viewport, GetHeaderTitle(), _status);
         DrawInspectorPanel();
         _shortcutKeyRenderer.DrawBottomHelp(
             GraphicsDevice.Viewport,
@@ -1548,6 +1549,9 @@ public class Game1 : Game
 
         return "選択: なし";
     }
+
+    private string GetHeaderTitle()
+        => _currentFilePath is null ? "未保存のダイアグラム" : Path.GetFileName(_currentFilePath);
 
     private string GetFileSummary()
         => _currentFilePath is null ? "保存先: 未指定" : $"保存先: {Path.GetFileName(_currentFilePath)}";

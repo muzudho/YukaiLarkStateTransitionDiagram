@@ -10,11 +10,6 @@ using Microsoft.Xna.Framework.Graphics;
 /// </summary>
 public sealed class HeaderRenderer : IDisposable
 {
-    /// <summary>
-    /// タイトル
-    /// </summary>
-    private const string Title = "YukaiLark State Transition Diagram";
-
     private readonly GraphicsDevice _graphicsDevice;
     private readonly SpriteBatch _spriteBatch;
     private readonly Texture2D _pixel;
@@ -41,15 +36,16 @@ public sealed class HeaderRenderer : IDisposable
     /// ヘッダーの描画
     /// </summary>
     /// <param name="viewport">描画領域のビューポート</param>
+    /// <param name="title">表示タイトル</param>
     /// <param name="status">現在の状態メッセージ</param>
-    public void DrawHeader(Viewport viewport, string status)
+    public void DrawHeader(Viewport viewport, string title, string status)
     {
         var bounds = new Rectangle(0, 0, viewport.Width, 58);
         _spriteBatch.Draw(_pixel, bounds, new Color(17, 19, 23, 238));
         _spriteBatch.Draw(_pixel, new Rectangle(0, bounds.Height - 1, viewport.Width, 1), new Color(65, 72, 84));
 
         // タイトルの描画
-        DrawUiText(Title, new Vector2(12, 8), new Color(245, 247, 250), 18, true);
+        DrawUiText(title, new Vector2(12, 8), new Color(245, 247, 250), 18, true);
 
         // 状態メッセージの描画
         DrawUiText(status, new Vector2(12, 32), new Color(210, 220, 232), 16, false);
