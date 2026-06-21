@@ -1558,8 +1558,14 @@ public class Game1 : Game
         position = DrawShortcutHint(position, "Ctrl+P", "PNG出力");
         position = DrawHelpSeparator(position);
         position = DrawShortcutHint(position, "Alt", "吸着なし");
-        position = DrawHelpSeparator(position);
-        position = DrawShortcutHint(position, "Tab", "遷移ラベル位置");
+
+        // ［遷移］エッジ選択中
+        if (_selectedTransition is not null)
+        {
+            position = DrawHelpSeparator(position);
+            position = DrawShortcutHint(position, "Tab", "遷移ラベル位置");
+        }
+
         position = DrawHelpSeparator(position);
         position = DrawShortcutHint(position, "Delete", "削除");
         position = DrawHelpSeparator(position);
