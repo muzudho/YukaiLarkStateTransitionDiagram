@@ -275,7 +275,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
                 [
                     new HelpHint("Ctrl+Shift+S", "名前を付けて保存"),
                     new HelpHint("Ctrl+O", "読込"),
-                    new HelpHint("R", "サンプル図に戻す")
+                    new HelpHint("Ctrl+P", "PNG出力")
                 ]
             ),
             new HelpPage

@@ -18,7 +18,6 @@ using Microsoft.Xna.Framework.Input;
 public class Game1 : Game
 {
     private const string AppTitle = "YukaiLark State Transition Diagram";
-    private const string SaveFileName = "diagram.json";
     private const int MaxHistoryCount = 100;
     private const int ExportPhotoImageMargin = 34;
     private const int ExportPhotoPaperSidePadding = 16;
@@ -70,6 +69,7 @@ public class Game1 : Game
     private Texture2D _pixel = null!;
     private Texture2D? _yukaiLarkMascotTexture;
     private readonly YukaiLarkAssistant _yukaiLarkAssistant = new();
+    private AppConfig _appConfig = new();
 
     private MouseState _previousMouse;
     private KeyboardState _previousKeyboard;
@@ -84,7 +84,6 @@ public class Game1 : Game
     private DiagramNode? _resizedNode;
     private string? _currentFilePath;
     private DiagramDocument? _pendingHistorySnapshot;
-    private bool _suppressHistory;
     private Vector2 _dragOffset;
     private Vector2 _cameraOffset;
     private Vector2 _panStartMouse;
@@ -117,7 +116,9 @@ public class Game1 : Game
     }
     protected override void Initialize()
     {
-        LoadOrCreateSample();
+        _appConfig = AppConfigStore.Load();
+        ClearDiagram();
+        ClearHistory();
         base.Initialize();
     }
     protected override void LoadContent()
@@ -317,11 +318,6 @@ public class Game1 : Game
         {
             DeleteSelection();
         }
-        if (IsNewKeyPress(keyboard, Keys.R))
-        {
-            CreateSample();
-            _status = "サンプル図に戻しました。";
-        }
         if (IsNewKeyPress(keyboard, Keys.T) && _selectedNode is not null)
         {
             ToggleNodeKind(_selectedNode);
@@ -344,12 +340,6 @@ public class Game1 : Game
     }
     private void ExecuteUndoableChange(Action change)
     {
-        if (_suppressHistory)
-        {
-            change();
-            return;
-        }
-
         var before = CaptureDiagramDocument();
         change();
         if (!AreDiagramDocumentsEqual(before, CaptureDiagramDocument()))
@@ -361,7 +351,7 @@ public class Game1 : Game
 
     private void BeginPendingHistory()
     {
-        if (_suppressHistory || _pendingHistorySnapshot is not null)
+        if (_pendingHistorySnapshot is not null)
         {
             return;
         }
@@ -371,9 +361,8 @@ public class Game1 : Game
 
     private void CommitPendingHistory()
     {
-        if (_suppressHistory || _pendingHistorySnapshot is null)
+        if (_pendingHistorySnapshot is null)
         {
-            _pendingHistorySnapshot = null;
             return;
         }
 
@@ -1201,12 +1190,8 @@ public class Game1 : Game
         var document = new DiagramDocument { Nodes = _nodes, Transitions = _transitions };
         YukaiDialogJsonWriter.Write(path, document);
         _currentFilePath = path;
+        RememberDiagramFile(path);
         _status = $"{Path.GetFileName(path)} を保存しました。";
-    }
-    private void LoadDiagram()
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, SaveFileName);
-        LoadDiagramFromPath(path);
     }
     private void LoadDiagramFromDialog()
     {
@@ -1253,28 +1238,9 @@ public class Game1 : Game
         _selectedTransition = null;
         _currentFilePath = path;
         ClearHistory();
+        RememberDiagramFile(path);
         _status = $"{Path.GetFileName(path)} を読み込みました。";
     }
-    private void LoadOrCreateSample()
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, SaveFileName);
-        if (File.Exists(path))
-        {
-            try
-            {
-                LoadDiagramFromPath(path);
-                return;
-            }
-            catch
-            {
-                _nodes.Clear();
-                _transitions.Clear();
-            }
-        }
-        ClearDiagram();
-        ClearHistory();
-    }
-
     /// <summary>
     /// 新規ファイル作成
     /// </summary>
@@ -1313,69 +1279,6 @@ public class Game1 : Game
         _exportDragStartRectangle = Rectangle.Empty;
         _exportDragMode = ExportSelectionDragMode.New;
         _status = DefaultStatus;
-    }
-    private void CreateSample(bool trackHistory = true)
-    {
-        if (trackHistory && !_suppressHistory)
-        {
-            ExecuteUndoableChange(() => CreateSample(trackHistory: false));
-            return;
-        }
-
-        var wasSuppressingHistory = _suppressHistory;
-        _suppressHistory = true;
-        try
-        {
-            ClearDiagram();
-            AddNode(new Vector2(230, 220));
-            AddNode(new Vector2(530, 220));
-            AddNode(new Vector2(530, 480));
-            AddNode(new Vector2(230, 480));
-            _nodes[0].Label = "開始";
-            _nodes[0].Kind = NodeKind.Start;
-            _nodes[1].Label = "下書き";
-            _nodes[2].Label = "レビュー";
-            _nodes[3].Label = "終了";
-            _nodes[3].Kind = NodeKind.End;
-            AddTransition(_nodes[0].Id, _nodes[1].Id);
-            AddTransition(_nodes[1].Id, _nodes[2].Id);
-            AddTransition(_nodes[2].Id, _nodes[1].Id);
-            AddTransition(_nodes[2].Id, _nodes[3].Id);
-            AddTransition(_nodes[1].Id, _nodes[1].Id);
-            _transitions[0].Label = "着手";
-            _transitions[0].LabelSide = 0;
-            _transitions[0].ControlPoint1 = new Vector2(340, 130);
-            _transitions[0].ControlPoint2 = new Vector2(430, 145);
-            _transitions[1].Label = "確認";
-            _transitions[1].LabelSide = 1;
-            _transitions[1].SourceAngle = MathHelper.PiOver2;
-            _transitions[1].TargetAngle = -MathHelper.PiOver2;
-            _transitions[1].ControlPoint1 = new Vector2(635, 320);
-            _transitions[1].ControlPoint2 = new Vector2(635, 390);
-            _transitions[2].Label = "差戻し";
-            _transitions[2].LabelSide = 0;
-            _transitions[2].SourceAngle = -MathHelper.PiOver2;
-            _transitions[2].TargetAngle = MathHelper.PiOver2;
-            _transitions[2].ControlPoint1 = new Vector2(405, 390);
-            _transitions[2].ControlPoint2 = new Vector2(405, 320);
-            _transitions[3].Label = "承認";
-            _transitions[3].LabelSide = 0;
-            _transitions[3].ControlPoint1 = new Vector2(420, 560);
-            _transitions[3].ControlPoint2 = new Vector2(325, 540);
-            _transitions[4].Label = "再入";
-            _transitions[4].LabelSide = 1;
-            _transitions[4].SourceAngle = -MathHelper.PiOver4;
-            _transitions[4].TargetAngle = MathHelper.PiOver4;
-            _transitions[4].ControlPoint1 = new Vector2(760, 60);
-            _transitions[4].ControlPoint2 = new Vector2(760, 380);
-            _selectedNode = null;
-            _selectedTransition = null;
-            _status = DefaultStatus;
-        }
-        finally
-        {
-            _suppressHistory = wasSuppressingHistory;
-        }
     }
     private DiagramNode? FindNodeAt(Vector2 position)
     {
@@ -2009,15 +1912,44 @@ public class Game1 : Game
         => keyboard.IsKeyDown(Keys.LeftAlt) || keyboard.IsKeyDown(Keys.RightAlt);
     private string GetInitialDirectory()
     {
-        if (_currentFilePath is not null)
+        if (TryGetExistingDirectory(_currentFilePath, out var currentDirectory))
         {
-            var currentDirectory = Path.GetDirectoryName(_currentFilePath);
-            if (!string.IsNullOrWhiteSpace(currentDirectory) && Directory.Exists(currentDirectory))
+            return currentDirectory;
+        }
+
+        foreach (var recentFile in _appConfig.RecentFiles)
+        {
+            if (TryGetExistingDirectory(recentFile, out var recentDirectory))
             {
-                return currentDirectory;
+                return recentDirectory;
             }
         }
+
         return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+    }
+
+    private void RememberDiagramFile(string path)
+    {
+        _appConfig.AddRecentFile(path);
+        AppConfigStore.Save(_appConfig);
+    }
+
+    private static bool TryGetExistingDirectory(string? filePath, out string directory)
+    {
+        directory = string.Empty;
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return false;
+        }
+
+        var candidate = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(candidate) || !Directory.Exists(candidate))
+        {
+            return false;
+        }
+
+        directory = candidate;
+        return true;
     }
     private static string CreateDefaultDiagramFileName()
         => $"{DateTime.Now:yyyyMMddHHmmss}_dialog.json";
