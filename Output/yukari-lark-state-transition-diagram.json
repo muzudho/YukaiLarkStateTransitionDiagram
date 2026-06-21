@@ -1,0 +1,131 @@
+{
+  "FormatVersion": 1,
+  "Nodes": [
+    {
+      "Id": 1,
+      "Label": "開始",
+      "Position": {
+        "X": 240,
+        "Y": 220
+      },
+      "RadiusUnits": 3,
+      "ColorIndex": 0,
+      "Kind": 1
+    },
+    {
+      "Id": 2,
+      "Label": "下書き",
+      "Position": {
+        "X": 520,
+        "Y": 220
+      },
+      "RadiusUnits": 3,
+      "ColorIndex": 1,
+      "Kind": 0
+    },
+    {
+      "Id": 3,
+      "Label": "レビュー",
+      "Position": {
+        "X": 520,
+        "Y": 480
+      },
+      "RadiusUnits": 3,
+      "ColorIndex": 2,
+      "Kind": 0
+    },
+    {
+      "Id": 4,
+      "Label": "終了",
+      "Position": {
+        "X": 240,
+        "Y": 480
+      },
+      "RadiusUnits": 3,
+      "ColorIndex": 3,
+      "Kind": 2
+    }
+  ],
+  "Transitions": [
+    {
+      "SourceId": 1,
+      "TargetId": 2,
+      "Label": "着手",
+      "LabelSide": 0,
+      "SourceAngle": 0,
+      "TargetAngle": 3.1415927,
+      "ControlPoint1": {
+        "X": 340,
+        "Y": 130
+      },
+      "ControlPoint2": {
+        "X": 430,
+        "Y": 145
+      }
+    },
+    {
+      "SourceId": 2,
+      "TargetId": 3,
+      "Label": "確認",
+      "LabelSide": 1,
+      "SourceAngle": 1.5707964,
+      "TargetAngle": -1.5707964,
+      "ControlPoint1": {
+        "X": 635,
+        "Y": 320
+      },
+      "ControlPoint2": {
+        "X": 635,
+        "Y": 390
+      }
+    },
+    {
+      "SourceId": 3,
+      "TargetId": 2,
+      "Label": "差戻し",
+      "LabelSide": 0,
+      "SourceAngle": -1.5707964,
+      "TargetAngle": 1.5707964,
+      "ControlPoint1": {
+        "X": 405,
+        "Y": 390
+      },
+      "ControlPoint2": {
+        "X": 405,
+        "Y": 320
+      }
+    },
+    {
+      "SourceId": 3,
+      "TargetId": 4,
+      "Label": "承認",
+      "LabelSide": 0,
+      "SourceAngle": 3.1415927,
+      "TargetAngle": 0,
+      "ControlPoint1": {
+        "X": 420,
+        "Y": 560
+      },
+      "ControlPoint2": {
+        "X": 325,
+        "Y": 540
+      }
+    },
+    {
+      "SourceId": 2,
+      "TargetId": 2,
+      "Label": "再入",
+      "LabelSide": 1,
+      "SourceAngle": -0.7853982,
+      "TargetAngle": 0.7853982,
+      "ControlPoint1": {
+        "X": 760,
+        "Y": 60
+      },
+      "ControlPoint2": {
+        "X": 760,
+        "Y": 380
+      }
+    }
+  ]
+}

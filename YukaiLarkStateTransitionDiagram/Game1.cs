@@ -54,6 +54,7 @@ public class Game1 : Game
     private PrimitiveRenderer _primitiveRenderer = null!;
     private EdgeRenderer _edgeRenderer = null!;
     private NodeRenderer _nodeRenderer = null!;
+    private HeaderRenderer _headerRenderer = null!;
     private ShortcutKeyRenderer _shortcutKeyRenderer = null!;
     private IKeyCapTheme _keyCapTheme = KeyCapThemes.Current;
     private BoardTheme _boardTheme = BoardThemes.ForKeyCapTheme(KeyCapThemes.Current);
@@ -113,6 +114,7 @@ public class Game1 : Game
         _pixel.SetData(new[] { Color.White });
         _primitiveRenderer = new PrimitiveRenderer(_spriteBatch, _pixel);
         _edgeRenderer = new EdgeRenderer(_primitiveRenderer, _spriteBatch, GetLabelTexture, _boardTheme);
+        _headerRenderer = new HeaderRenderer(GraphicsDevice, _spriteBatch, _pixel);
         _shortcutKeyRenderer = new ShortcutKeyRenderer(GraphicsDevice, _spriteBatch, _pixel, _keyCapTheme);
         _nodeRenderer = new NodeRenderer(_primitiveRenderer, _spriteBatch, Palette, GetLabelTexture);
     }
@@ -151,7 +153,7 @@ public class Game1 : Game
         DrawDiagramScene(GetViewMatrix(), includeInteraction: true);
 
         _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-        DrawToolbar();
+        _headerRenderer.DrawHeader(GraphicsDevice.Viewport, _status);
         DrawInspectorPanel();
         _shortcutKeyRenderer.DrawBottomHelp(
             GraphicsDevice.Viewport,
@@ -177,6 +179,7 @@ public class Game1 : Game
             texture.Dispose();
         }
         _uiTextTextureCache.Clear();
+        _headerRenderer?.Dispose();
         _shortcutKeyRenderer?.Dispose();
         base.UnloadContent();
     }
@@ -1505,16 +1508,6 @@ public class Game1 : Game
         _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X, rectangle.Y, thickness, rectangle.Height), color);
         _spriteBatch.Draw(_pixel, new Rectangle(rectangle.Right - thickness, rectangle.Y, thickness, rectangle.Height), color);
     }
-    private void DrawToolbar()
-    {
-        var width = GraphicsDevice.Viewport.Width;
-        var bounds = new Rectangle(0, 0, width, 58);
-        _spriteBatch.Draw(_pixel, bounds, new Color(17, 19, 23, 238));
-        _spriteBatch.Draw(_pixel, new Rectangle(0, bounds.Height - 1, width, 1), new Color(65, 72, 84));
-        DrawUiText("YukaiLark State Transition Diagram", new Vector2(12, 8), new Color(245, 247, 250), 18, true);
-        DrawUiText(_status, new Vector2(12, 32), new Color(210, 220, 232), 16, false);
-    }
-
     private void DrawInspectorPanel()
     {
         var width = GraphicsDevice.Viewport.Width;
