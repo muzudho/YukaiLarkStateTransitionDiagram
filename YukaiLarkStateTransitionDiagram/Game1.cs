@@ -99,6 +99,7 @@ public class Game1 : Game
     private ExportSelectionDragMode _exportDragMode;
     private int _nextNodeId = 1;
     private string _editingLabel = string.Empty;
+    private string _imeCompositionLabel = string.Empty;
     private string _status = DefaultStatus;
     private const string DefaultStatus = "N: 状態追加 / Shift+ドラッグ: 遷移作成 / F2・Enter: ラベル編集 / Ctrl+Z/Y: 元に戻す/やり直し / Ctrl+S: 保存";
     public Game1()
@@ -153,10 +154,12 @@ public class Game1 : Game
         }
         else if (IsEditingLabel)
         {
+            UpdateImeCompositionLabel();
             HandleLabelEditingKeyboard(keyboard);
         }
         else
         {
+            _imeCompositionLabel = string.Empty;
             if (keyboard.IsKeyDown(Keys.Escape) || GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
             {
                 Exit();
@@ -263,7 +266,26 @@ public class Game1 : Game
             return;
         }
         _editingLabel += e.Character;
+        _imeCompositionLabel = string.Empty;
     }
+
+    private void UpdateImeCompositionLabel()
+        => _imeCompositionLabel = WindowsImeCompositionReader.GetCompositionString();
+
+    private string GetEditingDisplayLabel()
+    {
+        if (string.IsNullOrEmpty(_imeCompositionLabel))
+        {
+            return _editingLabel;
+        }
+
+        var availableLength = Math.Max(0, 24 - _editingLabel.Length);
+        var composition = _imeCompositionLabel.Length <= availableLength
+            ? _imeCompositionLabel
+            : _imeCompositionLabel[..availableLength];
+        return _editingLabel + composition;
+    }
+
     private void HandleKeyboard(KeyboardState keyboard, MouseState mouse)
     {
         if (IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.Z))
@@ -868,6 +890,11 @@ public class Game1 : Game
         => $"{DateTime.Now:yyyyMMddHHmmss}_diagram.png";
     private void HandleLabelEditingKeyboard(KeyboardState keyboard)
     {
+        if (!string.IsNullOrEmpty(_imeCompositionLabel))
+        {
+            return;
+        }
+
         if (IsNewKeyPress(keyboard, Keys.Enter))
         {
             CommitLabelEdit();
@@ -888,6 +915,7 @@ public class Game1 : Game
         _editingNode = node;
         _editingTransition = null;
         _editingLabel = node.Label;
+        _imeCompositionLabel = string.Empty;
         _draggedNode = null;
         _resizedNode = null;
         _linkSource = null;
@@ -898,6 +926,7 @@ public class Game1 : Game
         _editingNode = null;
         _editingTransition = transition;
         _editingLabel = transition.Label;
+        _imeCompositionLabel = string.Empty;
         _draggedNode = null;
         _resizedNode = null;
         _linkSource = null;
@@ -926,12 +955,14 @@ public class Game1 : Game
         _editingNode = null;
         _editingTransition = null;
         _editingLabel = string.Empty;
+        _imeCompositionLabel = string.Empty;
     }
     private void CancelLabelEdit()
     {
         _editingNode = null;
         _editingTransition = null;
         _editingLabel = string.Empty;
+        _imeCompositionLabel = string.Empty;
         _status = "ラベル編集をキャンセルしました。";
     }
     private void ToggleNodeKind(DiagramNode node)
@@ -1629,6 +1660,7 @@ public class Game1 : Game
 
     private void DrawDiagramContent(bool includeInteraction, TimeSpan totalGameTime)
     {
+        var editingDisplayLabel = GetEditingDisplayLabel();
         if (includeInteraction)
         {
             DrawTransitionGhost(totalGameTime);
@@ -1646,7 +1678,7 @@ public class Game1 : Game
                     end,
                     includeInteraction && transition == _selectedTransition,
                     transition == _editingTransition,
-                    _editingLabel);
+                    editingDisplayLabel);
             }
         }
         if (includeInteraction)
@@ -1669,7 +1701,7 @@ public class Game1 : Game
         }
         foreach (var node in _nodes)
         {
-            _nodeRenderer.DrawNode(node, includeInteraction && node == _selectedNode, _editingNode, _editingLabel);
+            _nodeRenderer.DrawNode(node, includeInteraction && node == _selectedNode, _editingNode, editingDisplayLabel);
         }
         if (includeInteraction && _selectedNode is not null)
         {
