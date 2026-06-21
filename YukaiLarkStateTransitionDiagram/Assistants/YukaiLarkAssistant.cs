@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Input;
 internal sealed class YukaiLarkAssistant
 {
     private const double AssistWakeSeconds = 1.2;
+    private const double AssistGhostDelaySeconds = 0.7;
     private const double CompletedAssistDisplaySeconds = 5.0;
     private const int MascotTargetWidth = 176;
 
@@ -20,6 +21,8 @@ internal sealed class YukaiLarkAssistant
     public Rectangle MascotBounds { get; private set; }
 
     private bool IsAssistReady => _assistSeconds >= AssistWakeSeconds;
+    private bool IsAssistGhostReady => _assistSeconds >= AssistWakeSeconds + AssistGhostDelaySeconds;
+    private bool IsCompletedAssistActive => _completedKind != YukaiLarkAssistKind.None && _completedAssistSeconds > 0;
 
     public string Update(GameTime gameTime, YukaiLarkAssistantContext context, string currentStatus, string defaultStatus)
     {
@@ -29,6 +32,11 @@ internal sealed class YukaiLarkAssistant
             if (_completedAssistSeconds <= 0)
             {
                 _completedKind = YukaiLarkAssistKind.None;
+            }
+            else
+            {
+                Reset();
+                return currentStatus;
             }
         }
 
@@ -74,16 +82,16 @@ internal sealed class YukaiLarkAssistant
         };
 
     public bool ShouldDrawStartNodeGhost(YukaiLarkAssistantContext context)
-        => IsAssistReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateStartNode;
+        => !IsCompletedAssistActive && IsAssistGhostReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateStartNode;
 
     public bool ShouldDrawStateNodeGhost(YukaiLarkAssistantContext context)
-        => IsAssistReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateStateNode;
+        => !IsCompletedAssistActive && IsAssistGhostReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateStateNode;
 
     public bool ShouldDrawTransitionGhost(YukaiLarkAssistantContext context)
-        => IsAssistReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateTransition;
+        => !IsCompletedAssistActive && IsAssistGhostReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateTransition;
 
     public bool ShouldDrawTransitionEventGhost(YukaiLarkAssistantContext context)
-        => IsAssistReady && GetAssistKind(context) == YukaiLarkAssistKind.AddTransitionEvent;
+        => !IsCompletedAssistActive && IsAssistGhostReady && GetAssistKind(context) == YukaiLarkAssistKind.AddTransitionEvent;
 
     public static float GetAssistBobOffset(TimeSpan totalGameTime)
         => MathF.Sin((float)totalGameTime.TotalSeconds * 8.5f) * 8f;
@@ -140,7 +148,7 @@ internal sealed class YukaiLarkAssistant
     private YukaiLarkAssistKind GetRunnableAssistKind(YukaiLarkAssistantContext context)
     {
         var kind = GetAssistKind(context);
-        return IsAssistReady ? kind : YukaiLarkAssistKind.None;
+        return !IsCompletedAssistActive && IsAssistReady ? kind : YukaiLarkAssistKind.None;
     }
 
     private static YukaiLarkAssistKind GetAssistKind(YukaiLarkAssistantContext context)
