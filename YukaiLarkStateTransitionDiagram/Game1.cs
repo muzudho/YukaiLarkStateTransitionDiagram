@@ -1102,86 +1102,33 @@ public class Game1 : Game
     }
     private void RunYukaiLarkAssist(YukaiLarkAssistKind kind)
     {
-        switch (kind)
+        var result = YukaiLarkAssistOperations.Run(new YukaiLarkAssistOperation
         {
-            case YukaiLarkAssistKind.CreateStartNode:
-                CreateStartNodeWithAssist();
-                break;
-            case YukaiLarkAssistKind.CreateStateNode:
-                CreateStateNodeWithAssist();
-                break;
-            case YukaiLarkAssistKind.CreateTransition:
-                CreateTransitionWithAssist();
-                break;
-        }
-    }
-    private void CreateStartNodeWithAssist()
-    {
-        var viewport = GraphicsDevice.Viewport;
-        var screenPosition = _yukaiLarkAssistant.GetNodeScreenPosition(viewport, YukaiLarkAssistKind.CreateStartNode);
-        var worldPosition = ScreenToWorld(screenPosition);
-        ExecuteUndoableChange(() =>
-        {
-            var node = new DiagramNode
-            {
-                Id = _nextNodeId++,
-                Label = "開始",
-                Position = SnapToHalfGrid(worldPosition),
-                RadiusUnits = DiagramNode.DefaultRadiusUnits,
-                ColorIndex = 0,
-                Kind = NodeKind.Start
-            };
-            _nodes.Add(node);
-            _selectedNode = node;
-            _selectedTransition = null;
+            Kind = kind,
+            Viewport = GraphicsDevice.Viewport,
+            Nodes = _nodes,
+            Transitions = _transitions,
+            NextNodeId = _nextNodeId,
+            PaletteLength = Palette.Length,
+            ScreenToWorld = ScreenToWorld,
+            SnapToHalfGrid = SnapToHalfGrid,
+            ExecuteUndoableChange = ExecuteUndoableChange,
+            InitializeTransitionEndpoints = InitializeTransitionEndpoints,
+            GetNodeScreenPosition = _yukaiLarkAssistant.GetNodeScreenPosition
         });
-        _yukaiLarkAssistant.Reset();
-        _yukaiLarkAssistant.NotifyAssistCompleted(YukaiLarkAssistKind.CreateStartNode);
-        _status = "開始ノードを作成しました。次はNで状態追加、Shift+ドラッグで遷移作成。";
-    }
-    private void CreateStateNodeWithAssist()
-    {
-        var viewport = GraphicsDevice.Viewport;
-        var screenPosition = _yukaiLarkAssistant.GetNodeScreenPosition(viewport, YukaiLarkAssistKind.CreateStateNode);
-        var worldPosition = ScreenToWorld(screenPosition);
-        ExecuteUndoableChange(() =>
-        {
-            var node = new DiagramNode
-            {
-                Id = _nextNodeId++,
-                Label = $"状態{_nextNodeId - 1}",
-                Position = SnapToHalfGrid(worldPosition),
-                RadiusUnits = DiagramNode.DefaultRadiusUnits,
-                ColorIndex = (_nextNodeId - 2) % Palette.Length
-            };
-            _nodes.Add(node);
-            _selectedNode = node;
-            _selectedTransition = null;
-        });
-        _yukaiLarkAssistant.Reset();
-        _yukaiLarkAssistant.NotifyAssistCompleted(YukaiLarkAssistKind.CreateStateNode);
-        _status = "状態ノードを作成しました。次は開始ノードから遷移をつなげます。";
-    }
 
-    private void CreateTransitionWithAssist()
-    {
-        var source = _nodes.FirstOrDefault(node => node.Kind == NodeKind.Start);
-        var target = _nodes.FirstOrDefault(node => node.Kind != NodeKind.Start);
-        if (source is null || target is null)
+        _nextNodeId = result.NextNodeId;
+        _selectedNode = result.SelectedNode;
+        _selectedTransition = result.SelectedTransition;
+        if (result.Completed)
         {
-            _status = "遷移を作るには開始ノードと次の状態が必要です。";
-            return;
-        }
-
-        var before = _transitions.Count;
-        AddTransition(source.Id, target.Id);
-        if (_transitions.Count > before)
-        {
-            _selectedNode = null;
-            _selectedTransition = _transitions.LastOrDefault();
             _yukaiLarkAssistant.Reset();
-            _yukaiLarkAssistant.NotifyAssistCompleted(YukaiLarkAssistKind.CreateTransition);
-            _status = "開始から次の状態へ遷移を作成しました。F2・Enterでラベル編集できます。";
+            _yukaiLarkAssistant.NotifyAssistCompleted(kind);
+        }
+
+        if (!string.IsNullOrEmpty(result.Status))
+        {
+            _status = result.Status;
         }
     }
     private void AddTransition(int sourceId, int targetId)
@@ -2282,4 +2229,5 @@ public static class PrimitiveText
         }
     }
 }
+
 
