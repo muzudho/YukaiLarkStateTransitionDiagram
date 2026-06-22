@@ -449,7 +449,7 @@ public class Game1 : Game
             CloseFileMenu();
             if (wasStartup && _currentFilePath is null && _nodes.Count == 0 && _transitions.Count == 0)
             {
-                _status = "空の状態遷移図を新規作成しました。Ctrl+Rで最近ファイルを開けます。";
+                _status = "空の状態遷移図を開きました。Ctrl+Nで開始・終了マーク付きの新規作成もできます。";
             }
             else
             {
@@ -1596,9 +1596,44 @@ public class Game1 : Game
     /// </summary>
     private void CreateNewDiagram()
     {
-        ExecuteUndoableChange(ClearDiagram);
+        ExecuteUndoableChange(() =>
+        {
+            ClearDiagram();
+            AddInitialMarkers();
+        });
         _currentFilePath = null;
-        _status = "空の状態遷移図を新規作成しました。Ctrl+Sで保存先を指定できます。";
+        _status = "開始マークと終了マーク付きの状態遷移図を新規作成しました。Ctrl+Sで保存先を指定できます。";
+    }
+
+    private void AddInitialMarkers()
+    {
+        var viewport = GraphicsDevice.Viewport;
+        var centerX = viewport.Width / 2f;
+        var centerY = viewport.Height / 2f;
+        var verticalOffset = 120f;
+
+        _nodes.Add(new DiagramNode
+        {
+            Id = _nextNodeId++,
+            Label = "開始",
+            Position = SnapToHalfGrid(new Vector2(centerX, centerY - verticalOffset)),
+            RadiusUnits = DiagramNode.TerminalRadiusUnits,
+            ColorIndex = 0,
+            Kind = NodeKind.StartMarker
+        });
+
+        _nodes.Add(new DiagramNode
+        {
+            Id = _nextNodeId++,
+            Label = "終了",
+            Position = SnapToHalfGrid(new Vector2(centerX, centerY + verticalOffset)),
+            RadiusUnits = DiagramNode.TerminalRadiusUnits,
+            ColorIndex = 0,
+            Kind = NodeKind.EndMarker
+        });
+
+        _selectedNode = null;
+        _selectedTransition = null;
     }
 
     /// <summary>
