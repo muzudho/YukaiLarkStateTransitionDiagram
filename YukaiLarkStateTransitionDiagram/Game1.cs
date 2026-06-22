@@ -1235,7 +1235,7 @@ public class Game1 : Game
             node.Kind = node.Kind switch
             {
                 NodeKind.Normal => NodeKind.StartMarker,
-                NodeKind.StartMarker => NodeKind.EndMarker,
+                NodeKind.StartMarker => NodeKind.Normal,
                 _ => NodeKind.Normal
             };
             node.RadiusUnits = node.Kind is NodeKind.StartMarker or NodeKind.EndMarker
@@ -1323,7 +1323,7 @@ public class Game1 : Game
                 _draggedNode = node;
                 _dragOffset = mousePosition - node.Position;
                 BeginPendingHistory();
-                _status = "状態を選択しました。F2・Enterでラベル編集、Tで種別変更。";
+                _status = "状態を選択しました。F2・Enterでラベル編集、Tで開始マーク切替。";
             }
             else if (_selectedTransition is null)
             {
