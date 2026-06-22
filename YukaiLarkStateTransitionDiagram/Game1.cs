@@ -603,9 +603,9 @@ public class Game1 : Game
         DrawScreenRectangleOutline(bounds, new Color(178, 219, 203), 1);
 
         var shortcut = index == 9 ? "0" : (index + 1).ToString();
-        DrawUiText(shortcut, new Vector2(bounds.X + 12, bounds.Y + 9), new Color(51, 84, 102), 16, true);
-        DrawUiText(GetRecentFileDisplayText(path), new Vector2(bounds.X + 44, bounds.Y + 8), new Color(38, 55, 62), 15, true);
-        DrawUiText(Path.GetDirectoryName(path) ?? string.Empty, new Vector2(bounds.X + 44, bounds.Y + 27), new Color(98, 116, 122), 12, false);
+        DrawUiText(shortcut, new Vector2(bounds.X + 12, bounds.Y + 11), new Color(51, 84, 102), 16, true);
+        DrawUiText(GetRecentFileDisplayText(path), new Vector2(bounds.X + 44, bounds.Y + 3), new Color(38, 55, 62), 15, true);
+        DrawUiText(Path.GetDirectoryName(path) ?? string.Empty, new Vector2(bounds.X + 44, bounds.Y + 24), new Color(98, 116, 122), 12, false);
     }
 
     private (Rectangle NewButton, Rectangle OpenButton) GetFileMenuActionRectangles()
@@ -621,7 +621,7 @@ public class Game1 : Game
     private Rectangle GetRecentFileMenuItemRectangle(int index)
     {
         var panel = GetFileMenuPanelRectangle();
-        return new Rectangle(panel.X + 24, panel.Y + 224 + index * 40, panel.Width - 48, 36);
+        return new Rectangle(panel.X + 24, panel.Y + 224 + index * 44, panel.Width - 48, 40);
     }
 
     private Rectangle GetFileMenuPanelRectangle()
@@ -629,7 +629,7 @@ public class Game1 : Game
         var viewport = GraphicsDevice.Viewport;
         var recentCount = Math.Max(1, GetRecentFiles().Count);
         var width = Math.Clamp(viewport.Width - 64, 560, 780);
-        var height = Math.Min(viewport.Height - 64, 248 + recentCount * 40);
+        var height = Math.Min(viewport.Height - 64, 248 + recentCount * 44);
         var x = (viewport.Width - width) / 2;
         var y = Math.Max(24, (viewport.Height - height) / 2);
         return new Rectangle(x, y, width, height);
@@ -2690,5 +2690,4 @@ public static class PrimitiveText
         }
     }
 }
-
 
