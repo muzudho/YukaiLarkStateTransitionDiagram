@@ -238,7 +238,7 @@ public class Game1 : Game
         return new YukaiLarkAssistantContext(
             _nodes.Any(node => node.Kind == NodeKind.StartMarker),
             _nodes.Any(node => node.Kind == NodeKind.EndMarker),
-            _nodes.Count,
+            _nodes.Count(node => node.Kind == NodeKind.Normal),
             _transitions.Count,
             !string.IsNullOrEmpty(missingTransitionEventSummary),
             missingTransitionEventSummary,
@@ -1501,6 +1501,14 @@ public class Game1 : Game
     }
     private void AddTransition(int sourceId, int targetId)
     {
+        var source = FindNode(sourceId);
+        var target = FindNode(targetId);
+        if (source?.Kind == NodeKind.StartMarker && target?.Kind == NodeKind.EndMarker)
+        {
+            _status = "開始マークから終了マークへ直接はつなげません。先にNで状態を追加してください。";
+            return;
+        }
+
         if (_transitions.Any(t => t.SourceId == sourceId && t.TargetId == targetId))
         {
             _status = "同じ向きの遷移は既にあります。";
@@ -2125,7 +2133,7 @@ public class Game1 : Game
         }
 
         var source = _nodes.FirstOrDefault(node => node.Kind == NodeKind.StartMarker);
-        var target = _nodes.FirstOrDefault(node => node.Kind != NodeKind.StartMarker);
+        var target = _nodes.FirstOrDefault(node => node.Kind == NodeKind.Normal);
         if (source is null || target is null || _transitions.Any(t => t.SourceId == source.Id && t.TargetId == target.Id))
         {
             return;

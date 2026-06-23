@@ -160,7 +160,7 @@ internal static class YukaiLarkAssistOperations
     private static YukaiLarkAssistOperationResult CreateTransition(YukaiLarkAssistOperation operation)
     {
         var source = operation.Nodes.FirstOrDefault(node => node.Kind == NodeKind.StartMarker);
-        var target = operation.Nodes.FirstOrDefault(node => node.Kind != NodeKind.StartMarker);
+        var target = operation.Nodes.FirstOrDefault(node => node.Kind == NodeKind.Normal);
         if (source is null || target is null)
         {
             return new YukaiLarkAssistOperationResult(
