@@ -257,7 +257,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.CreateStartMarker => ("ユカイラークが作図しました", "開始マークを追加し、開始マークにして選択しました。", "手動なら Sで開始マークを追加できます。"),
             YukaiLarkAssistKind.DeleteStartMarker => ("ユカイラークが気づきました", "開始マークを削除したんですね？", "必要なら Ctrl+Z で元に戻せます。"),
             YukaiLarkAssistKind.CreateStateNode => ("ユカイラークが作図しました", "次の状態ノードを追加し、選択しました。", "手動なら Nで状態追加、ドラッグで位置調整です。"),
-            YukaiLarkAssistKind.CreateTransition => ("ユカイラークが作図しました", "開始マークから次の状態へ遷移を作成しました。", "手動なら Shift+ドラッグで状態同士を接続します。"),
+            YukaiLarkAssistKind.CreateTransition => ("ユカイラークが作図しました", "開始マークから次の状態へ遷移を作成しました。", "この遷移にはイベントを付けられません。"),
             YukaiLarkAssistKind.AddTransitionEvent => ("ユカイラークが見つけました", "イベント未設定の遷移を選択しました。", "イベント名を入力して Enterで確定します。"),
             YukaiLarkAssistKind.CreateEndMarker => ("ユカイラークが作図しました", "終了マークを追加し、終了マークにして選択しました。", "手動なら Eで終了マークを追加できます。"),
             _ => (string.Empty, string.Empty, string.Empty)

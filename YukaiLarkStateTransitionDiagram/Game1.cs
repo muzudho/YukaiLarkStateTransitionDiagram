@@ -253,7 +253,7 @@ public class Game1 : Game
 
     private string GetMissingTransitionEventSummary()
     {
-        var transition = _transitions.FirstOrDefault(t => string.IsNullOrWhiteSpace(t.Label));
+        var transition = _transitions.FirstOrDefault(t => CanTransitionHaveEvent(t) && string.IsNullOrWhiteSpace(t.Label));
         if (transition is null)
         {
             return string.Empty;
@@ -372,7 +372,7 @@ public class Game1 : Game
             }
             if (_selectedTransition is not null)
             {
-                BeginLabelEdit(_selectedTransition);
+                BeginTransitionLabelEdit(_selectedTransition);
                 return;
             }
         }
@@ -1188,6 +1188,17 @@ public class Game1 : Game
     }
     private void BeginLabelEdit(DiagramTransition transition)
     {
+        BeginTransitionLabelEdit(transition);
+    }
+
+    private void BeginTransitionLabelEdit(DiagramTransition transition)
+    {
+        if (!CanTransitionHaveEvent(transition))
+        {
+            _status = "開始マークから最初の状態へ入る遷移にはイベントを付けられません。";
+            return;
+        }
+
         _editingNode = null;
         _editingTransition = transition;
         _editingLabel = transition.Label;
@@ -1211,11 +1222,18 @@ public class Game1 : Game
         }
         else if (_editingTransition is not null)
         {
+            if (!CanTransitionHaveEvent(_editingTransition))
+            {
+                label = string.Empty;
+            }
+
             if (_editingTransition.Label != label)
             {
                 ExecuteUndoableChange(() => _editingTransition.Label = label);
             }
-            _status = "遷移ラベルを更新しました。Tabでラベル左右を切り替えられます。";
+            _status = CanTransitionHaveEvent(_editingTransition)
+                ? "遷移ラベルを更新しました。Tabでラベル左右を切り替えられます。"
+                : "開始マークから最初の状態へ入る遷移にはイベントを付けられません。";
         }
         _editingNode = null;
         _editingTransition = null;
@@ -1290,7 +1308,9 @@ public class Game1 : Game
             _selectedTransition = node is null ? FindTransitionAt(mousePosition) : null;
             if (_selectedTransition is not null)
             {
-                _status = "遷移を選択しました。F2・Enterでラベル編集、Tabでラベル左右切替、Deleteで削除できます。";
+                _status = CanTransitionHaveEvent(_selectedTransition)
+                    ? "遷移を選択しました。F2・Enterでラベル編集、Tabでラベル左右切替、Deleteで削除できます。"
+                    : "開始マークから最初の状態へ入る遷移にはイベントを付けられません。";
             }
             if (shiftDown && node is not null)
             {
@@ -1344,7 +1364,9 @@ public class Game1 : Game
                     {
                         _selectedNode = null;
                         _selectedTransition = _transitions.LastOrDefault();
-                        _status = "遷移を作成しました。ハンドルで形を調整、F2・Enterでラベル編集。";
+                        _status = _selectedTransition is not null && CanTransitionHaveEvent(_selectedTransition)
+                            ? "遷移を作成しました。ハンドルで形を調整、F2・Enterでラベル編集。"
+                            : "開始マークから最初の状態へ入る遷移を作成しました。この遷移にはイベントを付けられません。";
                     }
                 }
                 _linkSource = null;
@@ -1485,7 +1507,7 @@ public class Game1 : Game
         _selectedTransition = result.SelectedTransition;
         if (kind == YukaiLarkAssistKind.AddTransitionEvent && result.SelectedTransition is not null)
         {
-            BeginLabelEdit(result.SelectedTransition);
+            BeginTransitionLabelEdit(result.SelectedTransition);
         }
 
         if (result.Completed)
@@ -1518,6 +1540,10 @@ public class Game1 : Game
         {
             var transition = new DiagramTransition { SourceId = sourceId, TargetId = targetId };
             InitializeTransitionEndpoints(transition);
+            if (!CanTransitionHaveEvent(transition))
+            {
+                transition.Label = string.Empty;
+            }
             _transitions.Add(transition);
         });
     }
@@ -2033,8 +2059,18 @@ public class Game1 : Game
         {
             if (TryGetTransitionGeometry(transition, out var start, out var control1, out var control2, out var end))
             {
+                var displayTransition = CanTransitionHaveEvent(transition)
+                    ? transition
+                    : new DiagramTransition
+                    {
+                        SourceId = transition.SourceId,
+                        TargetId = transition.TargetId,
+                        LabelSide = transition.LabelSide,
+                        ControlPoint1 = transition.ControlPoint1,
+                        ControlPoint2 = transition.ControlPoint2
+                    };
                 _edgeRenderer.DrawTransition(
-                    transition,
+                    displayTransition,
                     start,
                     control1,
                     control2,
@@ -2158,7 +2194,7 @@ public class Game1 : Game
             return;
         }
 
-        var transition = _transitions.FirstOrDefault(t => string.IsNullOrWhiteSpace(t.Label));
+        var transition = _transitions.FirstOrDefault(t => CanTransitionHaveEvent(t) && string.IsNullOrWhiteSpace(t.Label));
         if (transition is null || !TryGetTransitionGeometry(transition, out var start, out var control1, out var control2, out var end))
         {
             return;
@@ -2448,6 +2484,12 @@ public class Game1 : Game
         return texture;
     }
 
+    private bool CanTransitionHaveEvent(DiagramTransition transition)
+    {
+        var source = FindNode(transition.SourceId);
+        var target = FindNode(transition.TargetId);
+        return source?.Kind != NodeKind.StartMarker || target?.Kind != NodeKind.Normal;
+    }
     private Texture2D GetLabelTexture(string label, bool editing)
     {
         var cacheKey = $"{(editing ? "edit" : "label")}|{label}";

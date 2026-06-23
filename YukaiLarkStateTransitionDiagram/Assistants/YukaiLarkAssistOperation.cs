@@ -130,7 +130,7 @@ internal static class YukaiLarkAssistOperations
 
     private static YukaiLarkAssistOperationResult AddTransitionEvent(YukaiLarkAssistOperation operation)
     {
-        var transition = operation.Transitions.FirstOrDefault(t => string.IsNullOrWhiteSpace(t.Label));
+        var transition = operation.Transitions.FirstOrDefault(t => CanTransitionHaveEvent(operation.Nodes, t) && string.IsNullOrWhiteSpace(t.Label));
         if (transition is null)
         {
             return new YukaiLarkAssistOperationResult(
@@ -151,6 +151,12 @@ internal static class YukaiLarkAssistOperations
             true);
     }
 
+    private static bool CanTransitionHaveEvent(IEnumerable<DiagramNode> nodes, DiagramTransition transition)
+    {
+        var source = nodes.FirstOrDefault(node => node.Id == transition.SourceId);
+        var target = nodes.FirstOrDefault(node => node.Id == transition.TargetId);
+        return source?.Kind != NodeKind.StartMarker || target?.Kind != NodeKind.Normal;
+    }
     private static string GetNodeLabel(IEnumerable<DiagramNode> nodes, int nodeId)
     {
         var node = nodes.FirstOrDefault(n => n.Id == nodeId);
@@ -194,7 +200,7 @@ internal static class YukaiLarkAssistOperations
             operation.NextNodeId,
             null,
             selectedTransition,
-            "開始から次の状態へ遷移を作成しました。F2・Enterでラベル編集できます。",
+            "開始マークから次の状態へ遷移を作成しました。この遷移にはイベントを付けません。",
             selectedTransition is not null);
     }
 }
