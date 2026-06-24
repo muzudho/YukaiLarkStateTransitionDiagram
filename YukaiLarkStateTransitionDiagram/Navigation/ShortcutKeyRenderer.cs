@@ -169,15 +169,11 @@ public sealed class ShortcutKeyRenderer : IDisposable
         {
             var exportHints = new List<HelpHint>
             {
-                new("左ドラッグ", "範囲作成・調整"),
+                new("ドラッグ", "枠を移動・調整"),
+                new("Enter", "撮影"),
                 new("Alt+ドラッグ", "吸着なし"),
                 new("右クリック/Esc", "キャンセル")
             };
-
-            if (hasExportSelection)
-            {
-                exportHints.Insert(1, new HelpHint("Enter", "撮影"));
-            }
 
             return
             [

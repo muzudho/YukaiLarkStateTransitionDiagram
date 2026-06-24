@@ -24,6 +24,11 @@ public class Game1 : Game
     private const int ExportPhotoPaperTopPadding = 18;
     private const int ExportPhotoPaperBottomPadding = 54;
     private const int ExportPhotoOuterBottomPadding = 10;
+    private const int ExportSelectionPadding = 40;
+    private const int ExportSelectionDefaultWidth = 640;
+    private const int ExportSelectionDefaultHeight = 360;
+    private const float ExportFlashDurationSeconds = 0.18f;
+    private const float ExportPhotoPreviewDurationSeconds = 1.35f;
     private const int RecentFileMenuMaxItems = AppConfig.MaxRecentFiles;
     private const string YukaiLarkMascotTexturePath = "Assets/BrandLogo/yukai-lark-logo.png";
     private static readonly Keys[] ThemeDigitKeys =
@@ -97,9 +102,12 @@ public class Game1 : Game
     private bool _exportSelectionDragging;
     private bool _hasExportSelection;
     private Rectangle _exportSelectionRectangle;
+    private Rectangle _exportPhotoPreviewRectangle;
     private Rectangle _exportDragStartRectangle;
     private Vector2 _exportDragStart;
     private ExportSelectionDragMode _exportDragMode;
+    private float _exportFlashSecondsRemaining;
+    private float _exportPhotoPreviewSecondsRemaining;
     private int _nextNodeId = 1;
     private string _editingLabel = string.Empty;
     private string _imeCompositionLabel = string.Empty;
@@ -145,6 +153,7 @@ public class Game1 : Game
     {
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
+        UpdateExportPhotoEffect(gameTime);
 
         if (_isFileMenuOpen)
         {
@@ -208,6 +217,7 @@ public class Game1 : Game
             _selectedNode,
             _selectedTransition);
         DrawExportSelectionOverlay();
+        DrawExportPhotoEffectOverlay();
         DrawFileMenuOverlay();
         _spriteBatch.End();
         base.Draw(gameTime);
@@ -892,6 +902,7 @@ public class Game1 : Game
 
             if (SavePngSelection(_exportSelectionRectangle))
             {
+                StartExportPhotoEffect(_exportSelectionRectangle);
                 _isExportSelecting = false;
                 _exportSelectionDragging = false;
                 _hasExportSelection = false;
@@ -968,8 +979,8 @@ public class Game1 : Game
     {
         _isExportSelecting = true;
         _exportSelectionDragging = false;
-        _hasExportSelection = false;
-        _exportSelectionRectangle = Rectangle.Empty;
+        _exportSelectionRectangle = CreateInitialExportSelectionRectangle();
+        _hasExportSelection = _exportSelectionRectangle.Width >= 16 && _exportSelectionRectangle.Height >= 16;
         _exportDragStartRectangle = Rectangle.Empty;
         _exportDragMode = ExportSelectionDragMode.None;
         _draggedNode = null;
@@ -978,9 +989,94 @@ public class Game1 : Game
         _draggedHandleKind = TransitionHandleKind.None;
         _linkSource = null;
         _isPanning = false;
-        _status = "PNG出力モードです。左ドラッグで範囲作成、Altで吸着なし、Enterで撮影、右クリック/Escでキャンセル。";
+        _status = "PNG出力モードです。枠をドラッグで調整、Enterで撮影、右クリック/Escでキャンセル。";
     }
 
+    private Rectangle CreateInitialExportSelectionRectangle()
+    {
+        if (!TryGetDiagramScreenBounds(out var bounds))
+        {
+            return CreateDefaultExportSelectionRectangle();
+        }
+
+        var rectangle = RectangleFromEdges(
+            (int)MathF.Floor(bounds.Left) - ExportSelectionPadding,
+            (int)MathF.Floor(bounds.Top) - ExportSelectionPadding,
+            (int)MathF.Ceiling(bounds.Right) + ExportSelectionPadding,
+            (int)MathF.Ceiling(bounds.Bottom) + ExportSelectionPadding);
+        rectangle = EnsureMinimumExportSelectionSize(rectangle);
+        var clamped = ClampExportSelectionRectangle(rectangle);
+        return clamped.Width >= 16 && clamped.Height >= 16
+            ? clamped
+            : CreateDefaultExportSelectionRectangle();
+    }
+
+    private bool TryGetDiagramScreenBounds(out Rectangle bounds)
+    {
+        var hasBounds = false;
+        var left = 0f;
+        var top = 0f;
+        var right = 0f;
+        var bottom = 0f;
+
+        void Include(Vector2 point)
+        {
+            var screenPoint = point + _cameraOffset;
+            if (!hasBounds)
+            {
+                left = right = screenPoint.X;
+                top = bottom = screenPoint.Y;
+                hasBounds = true;
+                return;
+            }
+
+            left = MathF.Min(left, screenPoint.X);
+            top = MathF.Min(top, screenPoint.Y);
+            right = MathF.Max(right, screenPoint.X);
+            bottom = MathF.Max(bottom, screenPoint.Y);
+        }
+
+        foreach (var node in _nodes)
+        {
+            Include(node.Position - new Vector2(node.Radius));
+            Include(node.Position + new Vector2(node.Radius));
+        }
+
+        foreach (var transition in _transitions)
+        {
+            if (!TryGetTransitionGeometry(transition, out var start, out var control1, out var control2, out var end))
+            {
+                continue;
+            }
+
+            Include(start);
+            Include(control1);
+            Include(control2);
+            Include(end);
+        }
+
+        bounds = hasBounds
+            ? RectangleFromEdges((int)MathF.Floor(left), (int)MathF.Floor(top), (int)MathF.Ceiling(right), (int)MathF.Ceiling(bottom))
+            : Rectangle.Empty;
+        return hasBounds;
+    }
+
+    private Rectangle CreateDefaultExportSelectionRectangle()
+    {
+        var viewport = GraphicsDevice.Viewport;
+        var width = Math.Min(ExportSelectionDefaultWidth, Math.Max(160, viewport.Width - ExportSelectionPadding * 2));
+        var height = Math.Min(ExportSelectionDefaultHeight, Math.Max(120, viewport.Height - ExportSelectionPadding * 2));
+        return new Rectangle((viewport.Width - width) / 2, (viewport.Height - height) / 2, width, height);
+    }
+
+    private Rectangle EnsureMinimumExportSelectionSize(Rectangle rectangle)
+    {
+        var width = Math.Max(rectangle.Width, Math.Min(ExportSelectionDefaultWidth, GraphicsDevice.Viewport.Width));
+        var height = Math.Max(rectangle.Height, Math.Min(ExportSelectionDefaultHeight, GraphicsDevice.Viewport.Height));
+        var centerX = rectangle.X + rectangle.Width / 2;
+        var centerY = rectangle.Y + rectangle.Height / 2;
+        return new Rectangle(centerX - width / 2, centerY - height / 2, width, height);
+    }
     private void CancelPngExportSelection(string status)
     {
         _isExportSelecting = false;
@@ -2332,8 +2428,61 @@ public class Game1 : Game
         DrawExportPhotoTop(rectangle);
         DrawScreenRectangleOutline(rectangle, new Color(255, 236, 150), 2);
         DrawExportSelectionHandles(rectangle);
+        DrawExportSelectionInstruction(rectangle);
     }
 
+    private void UpdateExportPhotoEffect(GameTime gameTime)
+    {
+        var elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        _exportFlashSecondsRemaining = MathF.Max(0f, _exportFlashSecondsRemaining - elapsedSeconds);
+        _exportPhotoPreviewSecondsRemaining = MathF.Max(0f, _exportPhotoPreviewSecondsRemaining - elapsedSeconds);
+    }
+
+    private void StartExportPhotoEffect(Rectangle selection)
+    {
+        _exportPhotoPreviewRectangle = selection;
+        _exportFlashSecondsRemaining = ExportFlashDurationSeconds;
+        _exportPhotoPreviewSecondsRemaining = ExportPhotoPreviewDurationSeconds;
+    }
+
+    private void DrawExportPhotoEffectOverlay()
+    {
+        if (_exportPhotoPreviewSecondsRemaining > 0f && _exportPhotoPreviewRectangle.Width > 0 && _exportPhotoPreviewRectangle.Height > 0)
+        {
+            var previewAlpha = MathHelper.Clamp(_exportPhotoPreviewSecondsRemaining / ExportPhotoPreviewDurationSeconds, 0f, 1f);
+            DrawExportPhotoFrame(new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), _exportPhotoPreviewRectangle, fillBackdrop: false, fillImageArea: false);
+            DrawExportPhotoTop(_exportPhotoPreviewRectangle);
+            DrawScreenRectangleOutline(_exportPhotoPreviewRectangle, new Color((byte)255, (byte)236, (byte)150, (byte)(190 * previewAlpha)), 2);
+        }
+
+        if (_exportFlashSecondsRemaining <= 0f)
+        {
+            return;
+        }
+
+        var flashAlpha = MathHelper.Clamp(_exportFlashSecondsRemaining / ExportFlashDurationSeconds, 0f, 1f);
+        _spriteBatch.Draw(_pixel, new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), new Color((byte)255, (byte)255, (byte)255, (byte)(210 * flashAlpha)));
+    }
+
+    private void DrawExportSelectionInstruction(Rectangle rectangle)
+    {
+        const string instruction = "ドラッグで調整 / Enterで撮影 / Escでキャンセル";
+        var textWidth = GetUiTextTexture(instruction, 15, true).Width;
+        var width = (int)MathF.Ceiling(textWidth) + 28;
+        var height = 34;
+        var x = Math.Clamp(rectangle.X + rectangle.Width / 2 - width / 2, 12, GraphicsDevice.Viewport.Width - width - 12);
+        var y = rectangle.Bottom + ExportPhotoPaperBottomPadding + 14;
+        if (y + height > GraphicsDevice.Viewport.Height - 58)
+        {
+            y = rectangle.Y - ExportPhotoPaperTopPadding - height - 12;
+        }
+
+        y = Math.Clamp(y, 62, GraphicsDevice.Viewport.Height - height - 58);
+        var panel = new Rectangle(x, y, width, height);
+        _spriteBatch.Draw(_pixel, panel, new Color(42, 36, 30, 220));
+        DrawScreenRectangleOutline(panel, new Color(255, 236, 150, 180), 1);
+        DrawUiText(instruction, new Vector2(panel.X + 14, panel.Y + 7), new Color(255, 246, 210), 15, true);
+    }
     private void DrawExportSelectionHandles(Rectangle rectangle)
     {
         var points = new[]
