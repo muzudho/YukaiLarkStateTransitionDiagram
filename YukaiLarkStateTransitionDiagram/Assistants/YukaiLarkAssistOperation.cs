@@ -19,6 +19,7 @@ internal sealed class YukaiLarkAssistOperation
     public required Action<Action> ExecuteUndoableChange { get; init; }
     public required Action<DiagramTransition> InitializeTransitionEndpoints { get; init; }
     public required Func<Viewport, YukaiLarkAssistKind, Vector2> GetNodeScreenPosition { get; init; }
+    public required float ShiftDiagramLeftDistance { get; init; }
 }
 
 internal readonly record struct YukaiLarkAssistOperationResult(
@@ -38,6 +39,7 @@ internal static class YukaiLarkAssistOperations
             YukaiLarkAssistKind.CreateSecondStateNode => CreateStateNode(operation, YukaiLarkAssistKind.CreateSecondStateNode),
             YukaiLarkAssistKind.CreateTransition => CreateTransition(operation),
             YukaiLarkAssistKind.AddTransitionEvent => AddTransitionEvent(operation),
+            YukaiLarkAssistKind.ShiftDiagramLeft => ShiftDiagramLeft(operation),
             YukaiLarkAssistKind.CreateEndMarker => CreateEndMarker(operation),
             _ => new YukaiLarkAssistOperationResult(operation.NextNodeId, null, null, string.Empty, false)
         };
@@ -132,6 +134,46 @@ internal static class YukaiLarkAssistOperations
             selectedNode is not null);
     }
 
+    private static YukaiLarkAssistOperationResult ShiftDiagramLeft(YukaiLarkAssistOperation operation)
+    {
+        if (operation.Nodes.Count == 0 || operation.ShiftDiagramLeftDistance <= 0f)
+        {
+            return new YukaiLarkAssistOperationResult(
+                operation.NextNodeId,
+                null,
+                null,
+                "左へ寄せる図がありません。",
+                false);
+        }
+
+        var delta = new Vector2(-operation.ShiftDiagramLeftDistance, 0f);
+        operation.ExecuteUndoableChange(() =>
+        {
+            foreach (var node in operation.Nodes)
+            {
+                node.Position += delta;
+            }
+
+            foreach (var transition in operation.Transitions)
+            {
+                if (transition.ControlPoint1.HasValue)
+                {
+                    transition.ControlPoint1 += delta;
+                }
+                if (transition.ControlPoint2.HasValue)
+                {
+                    transition.ControlPoint2 += delta;
+                }
+            }
+        });
+
+        return new YukaiLarkAssistOperationResult(
+            operation.NextNodeId,
+            null,
+            null,
+            "図を左に寄せました。右側の作業スペースを広げました。",
+            true);
+    }
     private static YukaiLarkAssistOperationResult AddTransitionEvent(YukaiLarkAssistOperation operation)
     {
         var transition = operation.Transitions.FirstOrDefault(t => CanTransitionHaveEvent(operation.Nodes, t) && string.IsNullOrWhiteSpace(t.Label));

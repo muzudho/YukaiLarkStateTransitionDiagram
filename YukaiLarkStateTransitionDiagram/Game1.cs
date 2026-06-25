@@ -268,6 +268,8 @@ public class Game1 : Game
             && normalToEndSource is not null
             && _transitions.Any(t => t.SourceId == normalToEndSource.Id && t.TargetId == endMarker.Id);
 
+        var shouldSuggestShiftDiagramLeft = TryGetDiagramShiftLeftDistance(out var shiftDiagramLeftDistance);
+
         return new YukaiLarkAssistantContext(
             startMarker is not null,
             endMarker is not null,
@@ -277,6 +279,8 @@ public class Game1 : Game
             hasNormalToEndTransition,
             !string.IsNullOrEmpty(missingTransitionEventSummary),
             missingTransitionEventSummary,
+            shouldSuggestShiftDiagramLeft,
+            shiftDiagramLeftDistance,
             !IsEditingLabel
                 && !_isExportSelecting
                 && !_isPanning
@@ -284,6 +288,45 @@ public class Game1 : Game
                 && _linkSource is null
                 && _draggedHandleTransition is null
                 && _resizedNode is null);
+    }
+    private bool TryGetDiagramShiftLeftDistance(out float distance)
+    {
+        distance = 0f;
+        var viewport = GraphicsDevice.Viewport;
+        if (_nodes.Count < 2 || viewport.Width < 760)
+        {
+            return false;
+        }
+
+        var minX = float.MaxValue;
+        var maxX = float.MinValue;
+        foreach (var node in _nodes)
+        {
+            var screenPosition = node.Position + _cameraOffset;
+            minX = MathF.Min(minX, screenPosition.X - node.Radius);
+            maxX = MathF.Max(maxX, screenPosition.X + node.Radius);
+        }
+
+        const float leftComfortPadding = 140f;
+        const float rightTriggerPadding = 180f;
+        const float desiredRightPadding = 320f;
+        const float minShift = 120f;
+        const float maxShift = 360f;
+        if (maxX < viewport.Width - rightTriggerPadding || minX < leftComfortPadding + minShift)
+        {
+            return false;
+        }
+
+        var shiftForRightSpace = maxX - (viewport.Width - desiredRightPadding);
+        var shiftBeforeLeftCrowding = minX - leftComfortPadding;
+        var rawShift = MathF.Min(maxShift, MathF.Min(shiftForRightSpace, shiftBeforeLeftCrowding));
+        if (rawShift < minShift)
+        {
+            return false;
+        }
+
+        distance = MathF.Floor(rawShift / DiagramNode.RadiusUnit) * DiagramNode.RadiusUnit;
+        return distance >= minShift;
     }
     private string GetMissingTransitionEventSummary()
     {
@@ -1629,6 +1672,7 @@ public class Game1 : Game
 
     private void RunYukaiLarkAssist(YukaiLarkAssistKind kind)
     {
+        var context = CreateAssistantContext();
         var result = YukaiLarkAssistOperations.Run(new YukaiLarkAssistOperation
         {
             Kind = kind,
@@ -1641,12 +1685,16 @@ public class Game1 : Game
             SnapToHalfGrid = SnapToHalfGrid,
             ExecuteUndoableChange = ExecuteUndoableChange,
             InitializeTransitionEndpoints = InitializeTransitionEndpoints,
-            GetNodeScreenPosition = _yukaiLarkAssistant.GetNodeScreenPosition
+            GetNodeScreenPosition = _yukaiLarkAssistant.GetNodeScreenPosition,
+            ShiftDiagramLeftDistance = context.ShiftDiagramLeftDistance
         });
 
         _nextNodeId = result.NextNodeId;
-        _selectedNode = result.SelectedNode;
-        _selectedTransition = result.SelectedTransition;
+        if (kind != YukaiLarkAssistKind.ShiftDiagramLeft)
+        {
+            _selectedNode = result.SelectedNode;
+            _selectedTransition = result.SelectedTransition;
+        }
         if (kind == YukaiLarkAssistKind.AddTransitionEvent && result.SelectedTransition is not null)
         {
             BeginTransitionLabelEdit(result.SelectedTransition);

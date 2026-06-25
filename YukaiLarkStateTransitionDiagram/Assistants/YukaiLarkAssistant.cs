@@ -213,6 +213,11 @@ internal sealed class YukaiLarkAssistant
             return YukaiLarkAssistKind.AddTransitionEvent;
         }
 
+        if (context.ShouldSuggestShiftDiagramLeft)
+        {
+            return YukaiLarkAssistKind.ShiftDiagramLeft;
+        }
+
         if (!context.HasEndMarker)
         {
             return YukaiLarkAssistKind.CreateEndMarker;
@@ -237,6 +242,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.CreateSecondStateNode => "ユカイラーク: 通常ノード同士の遷移例用に、2つ目の状態を作れます。",
             YukaiLarkAssistKind.CreateTransition => GetTransitionStatusText(context),
             YukaiLarkAssistKind.AddTransitionEvent => $"ユカイラーク: {context.MissingTransitionEventSummary} 間の遷移にイベントがありません。Enterか鳥をクリック。",
+            YukaiLarkAssistKind.ShiftDiagramLeft => "ユカイラーク: 図が右に寄ってきたぜ。Enterか鳥クリックで左に寄せます。",
             YukaiLarkAssistKind.CreateEndMarker => "ユカイラーク: 終了マークがまだありません。Enterか鳥をクリック。",
             _ => string.Empty
         };
@@ -285,6 +291,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.CreateSecondStateNode => ("2つ目の状態を作る？", "作らないときは数秒待つと次へ進みます"),
             YukaiLarkAssistKind.CreateTransition => GetTransitionBubbleText(context),
             YukaiLarkAssistKind.AddTransitionEvent => ("イベントを追加する？", $"{context.MissingTransitionEventSummary} 間の遷移"),
+            YukaiLarkAssistKind.ShiftDiagramLeft => ("図を左に寄せる？", "作業スペースを広げるぜ"),
             YukaiLarkAssistKind.CreateEndMarker => ("終了マークを作る？", "Enter または鳥をクリック"),
             _ => (string.Empty, string.Empty)
         };
@@ -374,6 +381,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.CreateSecondStateNode => ("ユカイラークが作図しました", "2つ目の状態ノードを追加し、選択しました。", "次は通常ノード同士の遷移をつなげます。"),
             YukaiLarkAssistKind.CreateTransition => ("ユカイラークが作図しました", "遷移を作成しました。", "通常ノード同士の遷移ならイベントを付けられます。"),
             YukaiLarkAssistKind.AddTransitionEvent => ("ユカイラークが見つけました", "イベント未設定の遷移を選択しました。", "イベント名を入力して Enterで確定します。"),
+            YukaiLarkAssistKind.ShiftDiagramLeft => ("ユカイラークが整えました", "図を左に寄せて、右側の作業スペースを広げました。", "Ctrl+Zで元に戻せます。"),
             YukaiLarkAssistKind.CreateEndMarker => ("ユカイラークが作図しました", "終了マークを追加し、終了マークにして選択しました。", "手動なら Eで終了マークを追加できます。"),
             _ => (string.Empty, string.Empty, string.Empty)
         };
@@ -388,6 +396,8 @@ internal readonly record struct YukaiLarkAssistantContext(
     bool HasNormalToEndTransition,
     bool HasMissingTransitionEvent,
     string MissingTransitionEventSummary,
+    bool ShouldSuggestShiftDiagramLeft,
+    float ShiftDiagramLeftDistance,
     bool IsInteractionIdle);
 
 internal enum YukaiLarkAssistKind
@@ -399,6 +409,7 @@ internal enum YukaiLarkAssistKind
     CreateSecondStateNode,
     CreateTransition,
     AddTransitionEvent,
+    ShiftDiagramLeft,
     CreateEndMarker
 }
 
