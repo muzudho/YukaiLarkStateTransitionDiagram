@@ -201,7 +201,7 @@ public sealed class EdgeRenderer
         if (showCaret && alpha > 0f)
         {
             var caretLabel = isEmpty ? displayLabel : editingLabel;
-            var caretIndex = isEmpty ? caretLabel.Length : Math.Clamp(editingCaretIndex, 0, caretLabel.Length);
+            var caretIndex = isEmpty ? 0 : Math.Clamp(editingCaretIndex, 0, caretLabel.Length);
             DrawEditingCaret(position, texture, caretLabel, caretIndex, Theme.SelectedTransitionLabelColor * alpha);
         }
     }
