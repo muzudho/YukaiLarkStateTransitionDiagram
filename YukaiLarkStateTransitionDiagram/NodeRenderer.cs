@@ -14,16 +14,20 @@ public sealed class NodeRenderer
     private readonly Color[] _palette;
     private readonly Func<string, bool, Texture2D> _getLabelTexture;
 
+    public BoardTheme Theme { get; set; }
+
     public NodeRenderer(
         PrimitiveRenderer primitiveRenderer,
         SpriteBatch spriteBatch,
         Color[] palette,
-        Func<string, bool, Texture2D> getLabelTexture)
+        Func<string, bool, Texture2D> getLabelTexture,
+        BoardTheme theme)
     {
         _primitiveRenderer = primitiveRenderer;
         _spriteBatch = spriteBatch;
         _palette = palette;
         _getLabelTexture = getLabelTexture;
+        Theme = theme;
     }
 
     /// <summary>
@@ -33,43 +37,50 @@ public sealed class NodeRenderer
     /// <param name="selected">選択されているかどうか</param>
     /// <param name="editingNode">編集中のノード</param>
     /// <param name="editingLabel">編集中のラベル</param>
-    public void DrawNode(DiagramNode node, bool selected, DiagramNode? editingNode, string editingLabel, int editingCaretIndex, bool showEditingCaret)
+    public void DrawNode(DiagramNode node, bool selected, DiagramNode? editingNode, string editingLabel, int editingCaretIndex, bool showEditingCaret, bool inactive = false)
     {
-        var fill = node.Kind == NodeKind.Normal && _palette.Length > 0
+        var baseFill = node.Kind == NodeKind.Normal && _palette.Length > 0
             ? _palette[node.ColorIndex % _palette.Length]
             : new Color(5, 6, 8);
+        var fill = inactive ? GetInactiveColor(baseFill, 0.38f) : baseFill;
+        var outerColor = inactive
+            ? GetInactiveColor(selected ? new Color(255, 255, 255) : new Color(10, 12, 16), 0.52f)
+            : selected ? new Color(255, 255, 255) : new Color(10, 12, 16);
+        var outlineColor = inactive ? GetInactiveColor(Color.White, 0.56f) : Color.White;
+        var normalOutlineColor = inactive ? GetInactiveColor(new Color(15, 18, 24), 0.56f) : new Color(15, 18, 24);
+        var labelColor = inactive ? Theme.PanelMutedTextColor * 0.72f : Color.White;
 
-        _primitiveRenderer.DrawCircle(node.Position, node.Radius + 4, selected ? new Color(255, 255, 255) : new Color(10, 12, 16));
+        _primitiveRenderer.DrawCircle(node.Position, node.Radius + 4, outerColor);
         _primitiveRenderer.DrawCircle(node.Position, node.Radius, fill);
 
         // 通常ノード
         if (node.Kind == NodeKind.Normal)
         {
-            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius, new Color(15, 18, 24), 3f);
+            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius, normalOutlineColor, 3f);
         }
         // 開始マーク
         else if (node.Kind == NodeKind.StartMarker)
         {
-            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 1f, Color.White, 5f);
+            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 1f, outlineColor, 5f);
         }
         // 終了マーク
         else
         {
-            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 2f, Color.White, 2f);
-            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 7f, Color.White, 2f);
+            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 2f, outlineColor, 2f);
+            _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius - 7f, outlineColor, 2f);
         }
 
         if (node == editingNode)
         {
-            DrawNodeLabel(editingLabel, node.Position, editing: true);
+            DrawNodeLabel(editingLabel, node.Position, editing: true, labelColor);
             if (showEditingCaret)
             {
-                DrawEditingCaret(editingLabel, editingCaretIndex, node.Position, Color.White);
+                DrawEditingCaret(editingLabel, editingCaretIndex, node.Position, labelColor);
             }
         }
         else
         {
-            DrawNodeLabel(node.Label, node.Position, editing: false);
+            DrawNodeLabel(node.Label, node.Position, editing: false, labelColor);
         }
     }
 
@@ -149,6 +160,20 @@ public sealed class NodeRenderer
         var bottom = texturePosition.Y + texture.Height - 6f;
         _primitiveRenderer.DrawLine(new Vector2(x, top), new Vector2(x, bottom), color, 2f);
     }
+
+    private Color GetInactiveColor(Color color, float opacity)
+        => Blend(color, Theme.BackgroundColor, 0.62f) * opacity;
+
+    private static Color Blend(Color from, Color to, float amount)
+    {
+        var clamped = MathHelper.Clamp(amount, 0f, 1f);
+        return new Color(
+            (byte)MathF.Round(MathHelper.Lerp(from.R, to.R, clamped)),
+            (byte)MathF.Round(MathHelper.Lerp(from.G, to.G, clamped)),
+            (byte)MathF.Round(MathHelper.Lerp(from.B, to.B, clamped)),
+            (byte)MathF.Round(MathHelper.Lerp(from.A, to.A, clamped)));
+    }
+
     /// <summary>
     /// ノードのリサイズハンドルの中心座標を取得します。
     /// </summary>

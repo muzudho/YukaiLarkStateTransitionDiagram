@@ -85,6 +85,7 @@ public class Game1 : Game
     private DiagramTransition? _selectedTransition;
     private DiagramNode? _draggedNode;
     private DiagramNode? _linkSource;
+    private DiagramNode? _invalidLinkSource;
     private DiagramNode? _editingNode;
     private DiagramTransition? _editingTransition;
     private DiagramTransition? _draggedHandleTransition;
@@ -145,7 +146,7 @@ public class Game1 : Game
         _headerRenderer = new HeaderRenderer(GraphicsDevice, _spriteBatch, _pixel);
         _inspectorPanelRenderer = new InspectorPanelRenderer(GraphicsDevice, _spriteBatch, _pixel);
         _shortcutKeyRenderer = new ShortcutKeyRenderer(GraphicsDevice, _spriteBatch, _pixel, _keyCapTheme, _boardTheme);
-        _nodeRenderer = new NodeRenderer(_primitiveRenderer, _spriteBatch, Palette, GetLabelTexture);
+        _nodeRenderer = new NodeRenderer(_primitiveRenderer, _spriteBatch, Palette, GetLabelTexture, _boardTheme);
         _yukaiLarkMascotTexture = LoadTextureWithTransparentWhite(YukaiLarkMascotTexturePath);
     }
     protected override void Update(GameTime gameTime)
@@ -899,6 +900,7 @@ public class Game1 : Game
         _keyCapTheme = KeyCapThemes.ShortcutThemes[themeIndex];
         _boardTheme = BoardThemes.ForKeyCapTheme(_keyCapTheme);
         _edgeRenderer.Theme = _boardTheme;
+        _nodeRenderer.Theme = _boardTheme;
         _shortcutKeyRenderer.KeyCapTheme = _keyCapTheme;
         _shortcutKeyRenderer.BoardTheme = _boardTheme;
         _status = $"テーマを {themeIndex}: {_keyCapTheme.Name} に切り替えました。背景とPNG出力にも反映します。";
@@ -1453,10 +1455,12 @@ public class Game1 : Game
                 if (!CanStartTransitionFrom(node))
                 {
                     _linkSource = null;
+                    _invalidLinkSource = node;
                     _status = "終了マークは到着専用です。終了マークから遷移は伸ばせません。";
                     return;
                 }
 
+                _invalidLinkSource = null;
                 _linkSource = node;
                 _status = "遷移を作成中です。接続先の状態でマウスを離してください。";
                 return;
@@ -1514,6 +1518,7 @@ public class Game1 : Game
                 }
                 _linkSource = null;
             }
+            _invalidLinkSource = null;
             if (_draggedHandleTransition is not null)
             {
                 CommitPendingHistory();
@@ -2314,9 +2319,10 @@ public class Game1 : Game
         }
         foreach (var node in _nodes)
         {
-            _nodeRenderer.DrawNode(node, includeInteraction && node == _selectedNode, _editingNode, editingDisplayLabel, editingDisplayCaretIndex, showEditingCaret);
+            var inactive = includeInteraction && IsInactiveDuringTransitionLink(node);
+            _nodeRenderer.DrawNode(node, includeInteraction && node == _selectedNode, _editingNode, editingDisplayLabel, editingDisplayCaretIndex, showEditingCaret, inactive);
         }
-        if (includeInteraction && _selectedNode is not null)
+        if (includeInteraction && _selectedNode is not null && !IsInactiveDuringTransitionLink(_selectedNode))
         {
             _nodeRenderer.DrawNodeResizeHandle(_selectedNode);
         }
@@ -2795,6 +2801,16 @@ public class Game1 : Game
         var texture = TextRenderer.CreateUiTextTexture(GraphicsDevice, text, size, bold);
         _uiTextTextureCache[cacheKey] = texture;
         return texture;
+    }
+
+    private bool IsInactiveDuringTransitionLink(DiagramNode node)
+    {
+        if (_invalidLinkSource is not null)
+        {
+            return node == _invalidLinkSource;
+        }
+
+        return _linkSource is not null && !CanEndTransitionAt(node);
     }
 
     private bool CanTransitionHaveEvent(DiagramTransition transition)
