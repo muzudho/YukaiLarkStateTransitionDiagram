@@ -3,6 +3,7 @@ namespace YukaiLarkStateTransitionDiagram;
 using YukaiLarkStateTransitionDiagram.Theme;
 using YukaiLarkStateTransitionDiagram.Assistants;
 using YukaiLarkStateTransitionDiagram.Navigation;
+using YukaiLarkStateTransitionDiagram.MiniMap;
 using YukaiLarkStateTransitionDiagram.Persistence;
 using System;
 using System.Collections.Generic;
@@ -104,6 +105,7 @@ public class Game1 : Game
     private Vector2 _panStartCamera;
     private bool _panMoved;
     private MouseCursor? _currentMouseCursor;
+    private bool _isMiniMapDragging;
     private bool _isPanning;
     private bool _isExportSelecting;
     private bool _isFileMenuOpen;
@@ -156,7 +158,7 @@ public class Game1 : Game
         _primitiveRenderer = new PrimitiveRenderer(_spriteBatch, _pixel);
         _edgeRenderer = new EdgeRenderer(_primitiveRenderer, _spriteBatch, GetLabelTexture, _boardTheme);
         _headerRenderer = new HeaderRenderer(GraphicsDevice, _spriteBatch, _pixel);
-        _inspectorPanelRenderer = new InspectorPanelRenderer(GraphicsDevice, _spriteBatch, _pixel);
+        _inspectorPanelRenderer = new InspectorPanelRenderer(GraphicsDevice, _spriteBatch, _pixel, _primitiveRenderer);
         _shortcutKeyRenderer = new ShortcutKeyRenderer(GraphicsDevice, _spriteBatch, _pixel, _keyCapTheme, _boardTheme);
         _nodeRenderer = new NodeRenderer(_primitiveRenderer, _spriteBatch, Palette, GetLabelTexture, _boardTheme);
         _yukaiLarkMascotTexture = LoadTextureWithTransparentWhite(YukaiLarkMascotTexturePath);
@@ -1996,8 +1998,29 @@ public class Game1 : Game
         var leftReleased = mouse.LeftButton == ButtonState.Released && _previousMouse.LeftButton == ButtonState.Pressed;
         var shiftDown = keyboard.IsKeyDown(Keys.LeftShift) || keyboard.IsKeyDown(Keys.RightShift);
         var snapNodes = !IsAltDown(keyboard);
+
+        if (_isMiniMapDragging)
+        {
+            if (mouse.LeftButton == ButtonState.Pressed)
+            {
+                CenterViewFromMiniMap(screenMousePosition);
+                _status = "ミニマップから表示位置を移動中です。";
+            }
+
+            if (leftReleased)
+            {
+                _isMiniMapDragging = false;
+                _status = "ミニマップから表示位置を移動しました。";
+            }
+
+            return;
+        }
         if (leftPressed)
         {
+            if (TryBeginMiniMapDrag(screenMousePosition))
+            {
+                return;
+            }
             if (GetThemeButtonRectangle(GraphicsDevice.Viewport).Contains(mouse.Position))
             {
                 OpenThemeMenu();
@@ -2172,6 +2195,31 @@ public class Game1 : Game
             }
         }
     }
+    private bool TryBeginMiniMapDrag(Vector2 screenMousePosition)
+    {
+        if (!InspectorPanelRenderer.TryGetMiniMapBounds(GraphicsDevice.Viewport, out var bounds)
+            || !bounds.Contains(screenMousePosition))
+        {
+            return false;
+        }
+
+        _isMiniMapDragging = true;
+        CenterViewFromMiniMap(screenMousePosition);
+        _status = "ミニマップから表示位置を移動中です。";
+        return true;
+    }
+
+    private void CenterViewFromMiniMap(Vector2 screenMousePosition)
+    {
+        if (!InspectorPanelRenderer.TryGetMiniMapBounds(GraphicsDevice.Viewport, out var bounds))
+        {
+            return;
+        }
+
+        var layout = MiniMapLayout.Create(bounds, _nodes, GraphicsDevice.Viewport, _cameraOffset);
+        CenterViewOnWorldPosition(layout.MapToWorld(screenMousePosition));
+    }
+
     private void CaptureDraggedNodeTransitionSnapshots(DiagramNode node)
     {
         _draggedNodeTransitionSnapshots.Clear();
@@ -2257,7 +2305,7 @@ public class Game1 : Game
 
     private MouseCursor GetMouseCursor(KeyboardState keyboard, MouseState mouse)
     {
-        if (_isPanning)
+        if (_isPanning || _isMiniMapDragging)
         {
             return MouseCursor.SizeAll;
         }
@@ -2267,13 +2315,17 @@ public class Game1 : Game
             return MouseCursor.Arrow;
         }
 
-        if (CanPanFromMousePosition(keyboard, mouse))
+        if (IsMouseOverMiniMap(mouse) || CanPanFromMousePosition(keyboard, mouse))
         {
             return MouseCursor.Hand;
         }
 
         return MouseCursor.Arrow;
     }
+
+    private bool IsMouseOverMiniMap(MouseState mouse)
+        => InspectorPanelRenderer.TryGetMiniMapBounds(GraphicsDevice.Viewport, out var bounds)
+            && bounds.Contains(mouse.Position);
 
     private bool CanPanFromMousePosition(KeyboardState keyboard, MouseState mouse)
     {
@@ -3504,9 +3556,13 @@ public class Game1 : Game
             totalGameTime,
             CreateAssistantContext(),
             _boardTheme,
+            GetAssistantAvoidBounds(viewport),
             DrawScreenRectangleOutline,
             DrawUiText);
     }
+
+    private Rectangle GetAssistantAvoidBounds(Viewport viewport)
+        => InspectorPanelRenderer.TryGetPanelBounds(viewport, out var bounds) ? bounds : Rectangle.Empty;
 
     private void DrawBottomShortcutHelp(GameTime gameTime)
     {
@@ -3528,6 +3584,8 @@ public class Game1 : Game
             _nodes.Count,
             _transitions.Count,
             GetSelectionSummary(),
+            _nodes,
+            _cameraOffset,
             _boardTheme);
     }
 

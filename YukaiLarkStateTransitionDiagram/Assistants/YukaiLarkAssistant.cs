@@ -146,6 +146,7 @@ internal sealed class YukaiLarkAssistant
         TimeSpan totalGameTime,
         YukaiLarkAssistantContext context,
         BoardTheme theme,
+        Rectangle avoidBounds,
         DrawRectangleOutline drawRectangleOutline,
         DrawUiText drawUiText)
     {
@@ -161,7 +162,7 @@ internal sealed class YukaiLarkAssistant
         var bob = assistKind != YukaiLarkAssistKind.None
             ? GetAssistBobOffset(totalGameTime)
             : 0f;
-        var target = new Rectangle(viewport.Width - MascotTargetWidth - 22, 178 + (int)MathF.Round(bob), MascotTargetWidth, targetHeight);
+        var target = GetMascotTarget(viewport, targetHeight, bob, avoidBounds);
         MascotBounds = target;
         spriteBatch.Draw(mascotTexture, target, source, Color.White * 0.92f);
 
@@ -173,6 +174,34 @@ internal sealed class YukaiLarkAssistant
         {
             DrawAssistBubble(spriteBatch, pixel, viewport, target, assistKind, context, theme, drawRectangleOutline, drawUiText);
         }
+    }
+
+    private static Rectangle GetMascotTarget(Viewport viewport, int targetHeight, float bob, Rectangle avoidBounds)
+    {
+        const int margin = 22;
+        const int panelGap = 14;
+        var bobOffset = (int)MathF.Round(bob);
+        var target = new Rectangle(viewport.Width - MascotTargetWidth - margin, 178 + bobOffset, MascotTargetWidth, targetHeight);
+        if (avoidBounds == Rectangle.Empty)
+        {
+            return target;
+        }
+
+        target.X = Math.Max(margin, avoidBounds.Right - MascotTargetWidth);
+        target.Y = avoidBounds.Y - targetHeight - panelGap + bobOffset;
+        if (target.Y >= margin)
+        {
+            return target;
+        }
+
+        target.Y = avoidBounds.Bottom + panelGap + bobOffset;
+        if (target.Bottom <= viewport.Height - margin)
+        {
+            return target;
+        }
+
+        target.Y = margin + bobOffset;
+        return target;
     }
 
     private YukaiLarkAssistKind GetRunnableAssistKind(YukaiLarkAssistantContext context)
