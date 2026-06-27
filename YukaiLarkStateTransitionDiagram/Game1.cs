@@ -534,11 +534,7 @@ public class Game1 : Game
                 return;
             }
         }
-        if (_selectedTransition is not null && IsNewKeyPress(keyboard, Keys.Tab))
-        {
-            ToggleTransitionLabelSide(_selectedTransition);
-            return;
-        }
+
         if (IsNewKeyPress(keyboard, Keys.N))
         {
             AddNode(ScreenToWorld(mouse.Position.ToVector2()));
@@ -1814,7 +1810,7 @@ public class Game1 : Game
                 ExecuteUndoableChange(() => _editingTransition.Label = label);
             }
             _status = CanTransitionHaveEvent(_editingTransition)
-                ? "遷移ラベルを更新しました。Tabでラベル左右を切り替えられます。"
+                ? "遷移ラベルを更新しました。ラベルはドラッグで移動できます。"
                 : "開始マークから最初の状態へ入る遷移にはイベントを付けられません。";
         }
         _editingNode = null;
@@ -2044,14 +2040,7 @@ public class Game1 : Game
         => stem.Length == 4
             && stem.StartsWith(prefix, StringComparison.Ordinal)
             && stem[3] is >= '1' and <= '9';
-    private void ToggleTransitionLabelSide(DiagramTransition transition)
-    {
-        ExecuteUndoableChange(() =>
-        {
-            transition.LabelSide = transition.LabelSide == 0 ? 1 : 0;
-        });
-        _status = "遷移ラベルを左右で切り替えました。";
-    }
+
     private void HandleMouse(KeyboardState keyboard, MouseState mouse)
     {
         var screenMousePosition = mouse.Position.ToVector2();
@@ -2153,7 +2142,7 @@ public class Game1 : Game
             if (transition is not null)
             {
                 _status = CanTransitionHaveEvent(transition)
-                    ? "遷移を選択しました。F2・Enterでラベル編集、Tabでラベル左右切替、Deleteで削除できます。"
+                    ? "遷移を選択しました。F2・Enterでラベル編集、ラベルはドラッグで移動、Deleteで削除できます。"
                     : "開始マークから最初の状態へ入る遷移にはイベントを付けられません。";
             }
             if (shiftDown && node is not null)

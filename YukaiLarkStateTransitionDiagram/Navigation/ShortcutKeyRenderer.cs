@@ -226,7 +226,6 @@ public sealed class ShortcutKeyRenderer : IDisposable
                 (
                     [
                         new HelpHint("F2・Enter", "ラベル編集"),
-                        new HelpHint("Tab", "ラベル左右切替"),
                         new HelpHint("Delete", "遷移削除")
                     ]
                 ),
