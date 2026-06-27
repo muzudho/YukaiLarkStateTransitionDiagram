@@ -3434,9 +3434,6 @@ public sealed record BoardTheme(
     public Color AssistantCutInFrameColor => WithAlpha(Blend(BackgroundColor, PhotoPaperColor, IsLightBackground ? 0.18f : 0.12f), 94);
     public Color AssistantCutInPrimaryTextColor => IsLightBackground ? TransitionLabelColor : SelectedTransitionLabelColor;
     public Color AssistantCutInSecondaryTextColor => IsLightBackground ? PanelSecondaryTextColor : Blend(SelectedTransitionLabelColor, TransitionLabelColor, 0.22f);
-    public Color StartMarkerFlowIconColor => WithAlpha(GridColor, 176);
-    public Color StartMarkerFlowIconSelectedColor => WithAlpha(GridColor, 232);
-    public Color StartMarkerFlowIconShadowColor => WithAlpha(IsLightBackground ? Color.White : Color.Black, 82);
 
     private static float GetLuminance(Color color)
         => ((0.2126f * color.R) + (0.7152f * color.G) + (0.0722f * color.B)) / 255f;

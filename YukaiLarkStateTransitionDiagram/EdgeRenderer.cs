@@ -49,20 +49,19 @@ public sealed class EdgeRenderer
         string editingLabel,
         int editingCaretIndex,
         bool showEditingCaret,
-        bool drawStartMarkerFlowIcon)
+        bool drawStartMarkerFlowLine)
     {
         var lineColor = selected ? Theme.SelectedTransitionLineColor : Theme.TransitionLineColor;
         var thickness = selected ? 4f : 3f;
 
+        if (drawStartMarkerFlowLine)
+        {
+            DrawDoubleBezierArrow(start, control1, control2, end, lineColor, selected);
+            return;
+        }
+
         DrawBezierArrow(start, control1, control2, end, lineColor, thickness);
-        if (drawStartMarkerFlowIcon)
-        {
-            DrawStartMarkerFlowIcon(start, control1, control2, end, transition.LabelSide, selected);
-        }
-        else
-        {
-            DrawTransitionLabel(transition, start, control1, control2, end, selected, editing, editingLabel, editingCaretIndex, showEditingCaret);
-        }
+        DrawTransitionLabel(transition, start, control1, control2, end, selected, editing, editingLabel, editingCaretIndex, showEditingCaret);
     }
 
     /// <summary>
@@ -168,43 +167,6 @@ public sealed class EdgeRenderer
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
         var labelColor = selected ? Theme.SelectedTransitionLabelColor : Theme.TransitionLabelColor;
         _spriteBatch.Draw(texture, position, labelColor);
-    }
-
-    private void DrawStartMarkerFlowIcon(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, int labelSide, bool selected)
-    {
-        var center = GetTransitionLabelCenter(start, control1, control2, end, labelSide, 44, 28);
-        var tangent = CubicBezierTangent(start, control1, control2, end, 0.5f);
-        var directionSource = tangent.LengthSquared() > 0.01f ? tangent : end - start;
-        var direction = directionSource.LengthSquared() > 0.01f
-            ? Vector2.Normalize(directionSource)
-            : Vector2.UnitX;
-        var normal = new Vector2(-direction.Y, direction.X);
-        var glyphColor = selected ? Theme.StartMarkerFlowIconSelectedColor : Theme.StartMarkerFlowIconColor;
-        var shadowColor = Theme.StartMarkerFlowIconShadowColor;
-        var shadowOffset = new Vector2(1f, 1f);
-
-        for (var i = -1; i <= 1; i++)
-        {
-            var tip = center + direction * (i * 11f + 7f);
-            var baseCenter = tip - direction * 10f;
-            var wingA = baseCenter + normal * 7f;
-            var wingB = baseCenter - normal * 7f;
-
-            DrawFilledTriangle(tip + shadowOffset, wingA + shadowOffset, wingB + shadowOffset, shadowColor);
-            DrawFilledTriangle(tip, wingA, wingB, glyphColor);
-        }
-    }
-
-    private void DrawFilledTriangle(Vector2 tip, Vector2 wingA, Vector2 wingB, Color color)
-    {
-        const int steps = 10;
-        for (var i = 0; i <= steps; i++)
-        {
-            var amount = i / (float)steps;
-            var left = Vector2.Lerp(tip, wingA, amount);
-            var right = Vector2.Lerp(tip, wingB, amount);
-            _primitiveRenderer.DrawLine(left, right, color, 2f);
-        }
     }
 
     /// <summary>
@@ -320,6 +282,43 @@ public sealed class EdgeRenderer
         DrawArrowHead(arrowEndLocation, tangent, color, thickness);
     }
 
+    private void DrawDoubleBezierArrow(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, Color color, bool selected)
+    {
+        const int segments = 32;
+        var halfGap = selected ? 4.2f : 3.6f;
+        var lineThickness = selected ? 2.4f : 2f;
+        Vector2? previousLeft = null;
+        Vector2? previousRight = null;
+
+        for (var i = 0; i <= segments; i++)
+        {
+            var t = i / (float)segments;
+            var point = CubicBezier(start, control1, control2, end, t);
+            var tangent = CubicBezierTangent(start, control1, control2, end, t);
+            if (tangent.LengthSquared() <= 0.01f)
+            {
+                tangent = end - start;
+            }
+
+            var normal = tangent.LengthSquared() > 0.01f
+                ? Vector2.Normalize(new Vector2(-tangent.Y, tangent.X))
+                : Vector2.UnitY;
+            var left = point + normal * halfGap;
+            var right = point - normal * halfGap;
+
+            if (previousLeft.HasValue && previousRight.HasValue)
+            {
+                _primitiveRenderer.DrawLine(previousLeft.Value, left, color, lineThickness);
+                _primitiveRenderer.DrawLine(previousRight.Value, right, color, lineThickness);
+            }
+
+            previousLeft = left;
+            previousRight = right;
+        }
+
+        DrawArrowHead(end, CubicBezierTangent(start, control1, control2, end, 1f), color, selected ? 4f : 3f);
+    }
+
     /// <summary>
     /// 矢印を描く。
     /// </summary>
@@ -428,4 +427,3 @@ public sealed class EdgeRenderer
             + 3f * t * t * (end - control2);
     }
 }
-
