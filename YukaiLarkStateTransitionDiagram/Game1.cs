@@ -2547,7 +2547,7 @@ public class Game1 : Game
             _primitiveRenderer.DrawLine(new Vector2(topLeft.X, y), new Vector2(bottomRight.X, y), color, 1f);
         }
     }
-    private void DrawHoverCue()
+    private void DrawHoverCue(TimeSpan totalGameTime)
     {
         if (IsEditingLabel || _isEditingFileName || _draggedNode is not null || _resizedNode is not null || _draggedHandleTransition is not null || _isPanning || _linkSource is not null)
         {
@@ -2587,7 +2587,7 @@ public class Game1 : Game
         var transition = FindTransitionAt(mouseWorld);
         if (transition is not null && transition != _selectedTransition && TryGetTransitionGeometry(transition, out start, out control1, out control2, out end))
         {
-            _edgeRenderer.DrawTransitionHoverCue(start, control1, control2, end);
+            _edgeRenderer.DrawTransitionHoverCue(start, control1, control2, end, totalGameTime);
         }
     }
 
@@ -2643,7 +2643,7 @@ public class Game1 : Game
         }
         if (includeInteraction)
         {
-            DrawHoverCue();
+            DrawHoverCue(totalGameTime);
             if (_linkSource is not null)
             {
                 var mouse = Mouse.GetState();

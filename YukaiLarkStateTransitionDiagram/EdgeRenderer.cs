@@ -56,8 +56,18 @@ public sealed class EdgeRenderer
 
         if (drawStartMarkerFlowLine)
         {
+            if (selected)
+            {
+                DrawSelectedTransitionEffect(start, control1, control2, end);
+            }
+
             DrawDoubleBezierArrow(start, control1, control2, end, lineColor, selected);
             return;
+        }
+
+        if (selected)
+        {
+            DrawSelectedTransitionEffect(start, control1, control2, end);
         }
 
         DrawBezierArrow(start, control1, control2, end, lineColor, thickness);
@@ -88,9 +98,9 @@ public sealed class EdgeRenderer
     /// <param name="control1"></param>
     /// <param name="control2"></param>
     /// <param name="end"></param>
-    public void DrawTransitionHoverCue(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end)
+    public void DrawTransitionHoverCue(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, TimeSpan totalGameTime)
     {
-        DrawBezierArrow(start, control1, control2, end, Theme.SelectedTransitionLineColor, 5f);
+        DrawWobblingBezierStroke(start, control1, control2, end, totalGameTime);
     }
 
     /// <summary>
@@ -317,6 +327,70 @@ public sealed class EdgeRenderer
         }
 
         DrawArrowHead(end, CubicBezierTangent(start, control1, control2, end, 1f), color, selected ? 4f : 3f);
+    }
+
+    private void DrawSelectedTransitionEffect(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end)
+    {
+        DrawBezierStroke(start, control1, control2, end, Theme.SelectedTransitionLineColor * 0.22f, 12f);
+        DrawBezierStroke(start, control1, control2, end, Theme.SelectedTransitionLabelColor * 0.34f, 7f);
+        DrawTransitionSelectionMarkers(start, control1, control2, end);
+    }
+
+    private void DrawBezierStroke(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, Color color, float thickness)
+    {
+        const int segments = 32;
+        var previous = start;
+        for (var i = 1; i <= segments; i++)
+        {
+            var t = i / (float)segments;
+            var current = CubicBezier(start, control1, control2, end, t);
+            _primitiveRenderer.DrawLine(previous, current, color, thickness);
+            previous = current;
+        }
+    }
+
+    private void DrawTransitionSelectionMarkers(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end)
+    {
+        ReadOnlySpan<float> markerPositions = [0.22f, 0.5f, 0.78f];
+        foreach (var t in markerPositions)
+        {
+            var center = CubicBezier(start, control1, control2, end, t);
+            _primitiveRenderer.DrawCircle(center, 5.5f, Theme.SelectedTransitionLabelColor * 0.72f);
+            _primitiveRenderer.DrawCircleOutline(center, 7.5f, Theme.SelectedTransitionLineColor * 0.78f, 2f);
+        }
+    }
+
+    private void DrawWobblingBezierStroke(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, TimeSpan totalGameTime)
+    {
+        const int segments = 32;
+        const float wobbleAmplitude = 2.2f;
+        var phase = (float)totalGameTime.TotalSeconds * 18f;
+        var previous = GetWobblingBezierPoint(start, control1, control2, end, 0f, phase, wobbleAmplitude);
+
+        for (var i = 1; i <= segments; i++)
+        {
+            var t = i / (float)segments;
+            var current = GetWobblingBezierPoint(start, control1, control2, end, t, phase, wobbleAmplitude);
+            _primitiveRenderer.DrawLine(previous, current, Theme.TransitionLineColor * 0.28f, 8f);
+            _primitiveRenderer.DrawLine(previous, current, Theme.TransitionLineColor * 0.9f, 4f);
+            previous = current;
+        }
+    }
+
+    private static Vector2 GetWobblingBezierPoint(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, float t, float phase, float amplitude)
+    {
+        var point = CubicBezier(start, control1, control2, end, t);
+        var tangent = CubicBezierTangent(start, control1, control2, end, t);
+        if (tangent.LengthSquared() <= 0.01f)
+        {
+            tangent = end - start;
+        }
+
+        var normal = tangent.LengthSquared() > 0.01f
+            ? Vector2.Normalize(new Vector2(-tangent.Y, tangent.X))
+            : Vector2.UnitY;
+        var wobble = MathF.Sin(phase + (t * MathHelper.TwoPi * 3f)) * amplitude;
+        return point + (normal * wobble);
     }
 
     /// <summary>
