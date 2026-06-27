@@ -1456,7 +1456,7 @@ public class Game1 : Game
                 {
                     _linkSource = null;
                     _invalidLinkSource = node;
-                    _status = "終了マークは到着専用です。終了マークから遷移は伸ばせません。";
+                    _status = GetCannotStartTransitionStatus(node);
                     return;
                 }
 
@@ -1729,7 +1729,7 @@ public class Game1 : Game
         var target = FindNode(targetId);
         if (source is not null && !CanStartTransitionFrom(source))
         {
-            _status = "終了マークは到着専用です。終了マークから遷移は伸ばせません。";
+            _status = GetCannotStartTransitionStatus(source);
             return;
         }
 
@@ -2418,7 +2418,7 @@ public class Game1 : Game
 
         if (startMarker is not null
             && normalNodes.Count >= 1
-            && !_transitions.Any(t => t.SourceId == startMarker.Id && t.TargetId == normalNodes[0].Id))
+            && !HasOutgoingTransition(startMarker))
         {
             source = startMarker;
             target = normalNodes[0];
@@ -2810,7 +2810,7 @@ public class Game1 : Game
             return node == _invalidLinkSource;
         }
 
-        return _linkSource is not null && !CanEndTransitionAt(node);
+        return _linkSource is not null && node != _linkSource && !CanEndTransitionAt(node);
     }
 
     private bool CanTransitionHaveEvent(DiagramTransition transition)
@@ -2820,8 +2820,23 @@ public class Game1 : Game
         return source?.Kind != NodeKind.StartMarker || target?.Kind != NodeKind.Normal;
     }
 
-    private static bool CanStartTransitionFrom(DiagramNode node)
-        => node.Kind != NodeKind.EndMarker;
+    private bool CanStartTransitionFrom(DiagramNode node)
+        => node.Kind != NodeKind.EndMarker
+            && !HasStartMarkerOutgoingTransition(node);
+
+    private bool HasStartMarkerOutgoingTransition(DiagramNode node)
+        => node.Kind == NodeKind.StartMarker && HasOutgoingTransition(node);
+
+    private bool HasOutgoingTransition(DiagramNode node)
+        => _transitions.Any(transition => transition.SourceId == node.Id);
+
+    private string GetCannotStartTransitionStatus(DiagramNode node)
+        => node.Kind switch
+        {
+            NodeKind.EndMarker => "終了マークは到着専用です。終了マークから遷移は伸ばせません。",
+            NodeKind.StartMarker => "開始マークから出る遷移は1本だけです。2本目は作成できません。",
+            _ => "この状態からは遷移を伸ばせません。"
+        };
 
     private static bool CanEndTransitionAt(DiagramNode node)
         => node.Kind != NodeKind.StartMarker;
@@ -3183,4 +3198,3 @@ public static class PrimitiveText
         }
     }
 }
-
