@@ -175,8 +175,20 @@ public sealed class EdgeRenderer
         var texture = _getLabelTexture(label, false);
         var center = GetTransitionLabelCenter(start, control1, control2, end, transition.LabelSide, texture);
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
-        var labelColor = selected ? Theme.SelectedTransitionLabelColor : Theme.TransitionLabelColor;
-        _spriteBatch.Draw(texture, position, labelColor);
+        _spriteBatch.Draw(texture, position, Theme.TransitionLabelColor);
+        if (selected)
+        {
+            DrawSelectedTransitionLabelUnderline(position, texture, label);
+        }
+    }
+
+    private void DrawSelectedTransitionLabelUnderline(Vector2 texturePosition, Texture2D texture, string label)
+    {
+        var textWidth = TextRenderer.MeasureLabelTextWidth(label);
+        var left = texturePosition.X + ((texture.Width - textWidth) / 2f);
+        var right = left + textWidth;
+        var y = texturePosition.Y + texture.Height - 3f;
+        _primitiveRenderer.DrawLine(new Vector2(left, y), new Vector2(right, y), Theme.SelectedTransitionLabelColor, 4f);
     }
 
     /// <summary>
