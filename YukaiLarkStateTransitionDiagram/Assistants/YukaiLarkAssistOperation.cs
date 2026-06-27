@@ -165,6 +165,23 @@ internal static class YukaiLarkAssistOperations
                 {
                     transition.ControlPoint2 += delta;
                 }
+
+                for (var i = 0; i < transition.Waypoints.Count; i++)
+                {
+                    transition.Waypoints[i] += delta;
+                }
+
+                foreach (var segmentControls in transition.SegmentControls)
+                {
+                    if (segmentControls.ControlPoint1.HasValue)
+                    {
+                        segmentControls.ControlPoint1 += delta;
+                    }
+                    if (segmentControls.ControlPoint2.HasValue)
+                    {
+                        segmentControls.ControlPoint2 += delta;
+                    }
+                }
             }
         });
 
