@@ -37,7 +37,8 @@ internal static class YukaiLarkAssistOperations
             YukaiLarkAssistKind.CreateStartMarker => CreateStartMarker(operation),
             YukaiLarkAssistKind.CreateStateNode => CreateStateNode(operation, YukaiLarkAssistKind.CreateStateNode),
             YukaiLarkAssistKind.CreateSecondStateNode => CreateStateNode(operation, YukaiLarkAssistKind.CreateSecondStateNode),
-            YukaiLarkAssistKind.CreateTransition => CreateTransition(operation),
+            YukaiLarkAssistKind.CreateTransition => CreateTransition(operation, YukaiLarkAssistKind.CreateTransition),
+            YukaiLarkAssistKind.ConnectUnreachedStateNode => CreateTransition(operation, YukaiLarkAssistKind.ConnectUnreachedStateNode),
             YukaiLarkAssistKind.AddTransitionEvent => AddTransitionEvent(operation),
             YukaiLarkAssistKind.ShiftDiagramLeft => ShiftDiagramLeft(operation),
             YukaiLarkAssistKind.CreateEndMarker => CreateEndMarker(operation),
@@ -210,9 +211,14 @@ internal static class YukaiLarkAssistOperations
         return node is null || string.IsNullOrWhiteSpace(node.Label) ? $"状態{nodeId}" : node.Label;
     }
 
-    private static YukaiLarkAssistOperationResult CreateTransition(YukaiLarkAssistOperation operation)
+    private static YukaiLarkAssistOperationResult CreateTransition(YukaiLarkAssistOperation operation, YukaiLarkAssistKind kind)
     {
-        if (!TryGetTransitionEndpoints(operation.Nodes, operation.Transitions, out var source, out var target))
+        DiagramNode source;
+        DiagramNode target;
+        var hasEndpoints = kind == YukaiLarkAssistKind.ConnectUnreachedStateNode
+            ? TryGetUnreachedNormalTransitionEndpoints(operation.Nodes, operation.Transitions, out source, out target)
+            : TryGetTransitionEndpoints(operation.Nodes, operation.Transitions, out source, out target);
+        if (!hasEndpoints)
         {
             return new YukaiLarkAssistOperationResult(
                 operation.NextNodeId,
@@ -241,11 +247,13 @@ internal static class YukaiLarkAssistOperations
             selectedTransition = transition;
         });
 
-        var status = source.Kind == NodeKind.StartMarker
-            ? "開始マークから次の状態へ遷移を作成しました。この遷移にはイベントを付けません。"
-            : target.Kind == NodeKind.EndMarker
-                ? "開始から一番遠い状態から終了マークへ遷移を作成しました。次はイベントを追加できます。"
-                : "通常ノード同士の遷移を作成しました。次はイベントを追加できます。";
+        var status = kind == YukaiLarkAssistKind.ConnectUnreachedStateNode
+            ? "入ってくる遷移がなかった通常ノードへ、近くのノードから遷移を作成しました。"
+            : source.Kind == NodeKind.StartMarker
+                ? "開始マークから次の状態へ遷移を作成しました。この遷移にはイベントを付けません。"
+                : target.Kind == NodeKind.EndMarker
+                    ? "開始から一番遠い状態から終了マークへ遷移を作成しました。次はイベントを追加できます。"
+                    : "通常ノード同士の遷移を作成しました。次はイベントを追加できます。";
         return new YukaiLarkAssistOperationResult(
             operation.NextNodeId,
             null,
@@ -254,6 +262,41 @@ internal static class YukaiLarkAssistOperations
             selectedTransition is not null);
     }
 
+    private static bool TryGetUnreachedNormalTransitionEndpoints(
+        IReadOnlyCollection<DiagramNode> nodes,
+        IEnumerable<DiagramTransition> transitions,
+        out DiagramNode source,
+        out DiagramNode target)
+    {
+        var transitionList = transitions.ToList();
+        var bestDistance = float.MaxValue;
+        source = null!;
+        target = null!;
+
+        foreach (var candidateTarget in nodes.Where(node => node.Kind == NodeKind.Normal && !transitionList.Any(t => t.TargetId == node.Id)))
+        {
+            foreach (var candidateSource in nodes.Where(node => CanConnectUnreachedNormalFrom(node, candidateTarget, transitionList)))
+            {
+                var distance = (candidateSource.Position - candidateTarget.Position).LengthSquared();
+                if (distance >= bestDistance)
+                {
+                    continue;
+                }
+
+                bestDistance = distance;
+                source = candidateSource;
+                target = candidateTarget;
+            }
+        }
+
+        return source is not null && target is not null;
+    }
+
+    private static bool CanConnectUnreachedNormalFrom(DiagramNode source, DiagramNode target, IEnumerable<DiagramTransition> transitions)
+        => source.Id != target.Id
+            && source.Kind != NodeKind.EndMarker
+            && (source.Kind != NodeKind.StartMarker || !transitions.Any(t => t.SourceId == source.Id))
+            && !transitions.Any(t => t.SourceId == source.Id && t.TargetId == target.Id);
     private static bool TryGetTransitionEndpoints(
         IReadOnlyCollection<DiagramNode> nodes,
         IEnumerable<DiagramTransition> transitions,

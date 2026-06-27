@@ -290,6 +290,7 @@ public class Game1 : Game
             && _transitions.Any(t => t.SourceId == normalToEndSource.Id && t.TargetId == endMarker.Id);
 
         var shouldSuggestShiftDiagramLeft = TryGetDiagramShiftLeftDistance(out var shiftDiagramLeftDistance);
+        var hasUnreachedNormalNode = TryGetUnreachedNormalTransitionEndpoints(out _, out _);
 
         return new YukaiLarkAssistantContext(
             startMarker is not null,
@@ -302,6 +303,7 @@ public class Game1 : Game
             missingTransitionEventSummary,
             shouldSuggestShiftDiagramLeft,
             shiftDiagramLeftDistance,
+            hasUnreachedNormalNode,
             !IsEditingLabel
                 && !_isEditingFileName
                 && !_isExportSelecting
@@ -2781,6 +2783,36 @@ public class Game1 : Game
         _edgeRenderer.DrawTransitionGhost(start + offset, control1 + offset, control2 + offset, end + offset, 1f);
     }
 
+    private bool TryGetUnreachedNormalTransitionEndpoints(out DiagramNode source, out DiagramNode target)
+    {
+        var bestDistance = float.MaxValue;
+        source = null!;
+        target = null!;
+
+        foreach (var candidateTarget in _nodes.Where(node => node.Kind == NodeKind.Normal && !_transitions.Any(t => t.TargetId == node.Id)))
+        {
+            foreach (var candidateSource in _nodes.Where(node => CanConnectUnreachedNormalFrom(node, candidateTarget)))
+            {
+                var distance = (candidateSource.Position - candidateTarget.Position).LengthSquared();
+                if (distance >= bestDistance)
+                {
+                    continue;
+                }
+
+                bestDistance = distance;
+                source = candidateSource;
+                target = candidateTarget;
+            }
+        }
+
+        return source is not null && target is not null;
+    }
+
+    private bool CanConnectUnreachedNormalFrom(DiagramNode source, DiagramNode target)
+        => source.Id != target.Id
+            && source.Kind != NodeKind.EndMarker
+            && (source.Kind != NodeKind.StartMarker || !HasOutgoingTransition(source))
+            && !_transitions.Any(t => t.SourceId == source.Id && t.TargetId == target.Id);
     private bool TryGetAssistantTransitionEndpoints(out DiagramNode source, out DiagramNode target)
     {
         var startMarker = _nodes.FirstOrDefault(node => node.Kind == NodeKind.StartMarker);
@@ -2819,6 +2851,11 @@ public class Game1 : Game
         {
             source = normalToEndSource;
             target = endMarker;
+            return true;
+        }
+
+        if (TryGetUnreachedNormalTransitionEndpoints(out source, out target))
+        {
             return true;
         }
 

@@ -108,7 +108,12 @@ internal sealed class YukaiLarkAssistant
     }
 
     public bool ShouldDrawTransitionGhost(YukaiLarkAssistantContext context)
-        => !IsCompletedAssistActive && IsAssistGhostReady && GetAssistKind(context) == YukaiLarkAssistKind.CreateTransition;
+    {
+        var kind = GetAssistKind(context);
+        return !IsCompletedAssistActive
+            && IsAssistGhostReady
+            && (kind == YukaiLarkAssistKind.CreateTransition || kind == YukaiLarkAssistKind.ConnectUnreachedStateNode);
+    }
 
     public bool ShouldDrawTransitionEventGhost(YukaiLarkAssistantContext context)
         => !IsCompletedAssistActive && IsAssistGhostReady && GetAssistKind(context) == YukaiLarkAssistKind.AddTransitionEvent;
@@ -228,6 +233,11 @@ internal sealed class YukaiLarkAssistant
             return YukaiLarkAssistKind.CreateTransition;
         }
 
+        if (context.HasUnreachedNormalNode)
+        {
+            return YukaiLarkAssistKind.ConnectUnreachedStateNode;
+        }
+
         return YukaiLarkAssistKind.None;
     }
 
@@ -244,6 +254,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.AddTransitionEvent => $"ユカイラーク: {context.MissingTransitionEventSummary} 間の遷移にイベントがありません。Enterか鳥をクリック。",
             YukaiLarkAssistKind.ShiftDiagramLeft => "ユカイラーク: 図が右に寄ってきたぜ。Enterか鳥クリックで左に寄せます。",
             YukaiLarkAssistKind.CreateEndMarker => "ユカイラーク: 終了マークがまだありません。Enterか鳥をクリック。",
+            YukaiLarkAssistKind.ConnectUnreachedStateNode => "ユカイラーク: 入ってくる遷移がない通常ノードがあります。近くのノードからつなげますか？",
             _ => string.Empty
         };
 
@@ -293,6 +304,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.AddTransitionEvent => ("イベントを追加する？", $"{context.MissingTransitionEventSummary} 間の遷移"),
             YukaiLarkAssistKind.ShiftDiagramLeft => ("図を左に寄せる？", "作業スペースを広げるぜ"),
             YukaiLarkAssistKind.CreateEndMarker => ("終了マークを作る？", "Enter または鳥をクリック"),
+            YukaiLarkAssistKind.ConnectUnreachedStateNode => ("近くのノードからつなげる？", "Enter または鳥をクリック"),
             _ => (string.Empty, string.Empty)
         };
 
@@ -383,6 +395,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.AddTransitionEvent => ("ユカイラークが見つけました", "イベント未設定の遷移を選択しました。", "イベント名を入力して Enterで確定します。"),
             YukaiLarkAssistKind.ShiftDiagramLeft => ("ユカイラークが整えました", "図を左に寄せて、右側の作業スペースを広げました。", "Ctrl+Zで元に戻せます。"),
             YukaiLarkAssistKind.CreateEndMarker => ("ユカイラークが作図しました", "終了マークを追加し、終了マークにして選択しました。", "手動なら Eで終了マークを追加できます。"),
+            YukaiLarkAssistKind.ConnectUnreachedStateNode => ("ユカイラークが作図しました", "入ってくる遷移がなかった通常ノードへ遷移を作成しました。", "必要ならイベント名を追加できます。"),
             _ => (string.Empty, string.Empty, string.Empty)
         };
 }
@@ -398,6 +411,7 @@ internal readonly record struct YukaiLarkAssistantContext(
     string MissingTransitionEventSummary,
     bool ShouldSuggestShiftDiagramLeft,
     float ShiftDiagramLeftDistance,
+    bool HasUnreachedNormalNode,
     bool IsInteractionIdle);
 
 internal enum YukaiLarkAssistKind
@@ -410,7 +424,8 @@ internal enum YukaiLarkAssistKind
     CreateTransition,
     AddTransitionEvent,
     ShiftDiagramLeft,
-    CreateEndMarker
+    CreateEndMarker,
+    ConnectUnreachedStateNode
 }
 
 internal delegate void DrawRectangleOutline(Rectangle rectangle, Color color, int thickness);
