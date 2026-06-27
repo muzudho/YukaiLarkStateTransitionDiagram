@@ -100,6 +100,7 @@ public class Game1 : Game
     private Vector2 _cameraOffset;
     private Vector2 _panStartMouse;
     private Vector2 _panStartCamera;
+    private bool _panMoved;
     private MouseCursor? _currentMouseCursor;
     private bool _isPanning;
     private bool _isExportSelecting;
@@ -1699,11 +1700,15 @@ public class Game1 : Game
             }
 
             var node = FindNodeAt(mousePosition);
-            _selectedNode = node;
-            _selectedTransition = node is null ? FindTransitionAt(mousePosition) : null;
-            if (_selectedTransition is not null)
+            var transition = node is null ? FindTransitionAt(mousePosition) : null;
+            if (node is not null || transition is not null)
             {
-                _status = CanTransitionHaveEvent(_selectedTransition)
+                _selectedNode = node;
+                _selectedTransition = transition;
+            }
+            if (transition is not null)
+            {
+                _status = CanTransitionHaveEvent(transition)
                     ? "遷移を選択しました。F2・Enterでラベル編集、Tabでラベル左右切替、Deleteで削除できます。"
                     : "開始マークから最初の状態へ入る遷移にはイベントを付けられません。";
             }
@@ -1730,9 +1735,10 @@ public class Game1 : Game
                 BeginPendingHistory();
                 _status = "状態を選択しました。F2・Enterでラベル編集、Tで開始マーク切替。";
             }
-            else if (_selectedTransition is null)
+            else if (transition is null)
             {
                 _isPanning = true;
+                _panMoved = false;
                 _panStartMouse = screenMousePosition;
                 _panStartCamera = _cameraOffset;
                 _linkSource = null;
@@ -1756,6 +1762,7 @@ public class Game1 : Game
         if (_isPanning && mouse.LeftButton == ButtonState.Pressed)
         {
             _cameraOffset = _panStartCamera + screenMousePosition - _panStartMouse;
+            _panMoved = _panMoved || (screenMousePosition - _panStartMouse).LengthSquared() > 9f;
         }
         if (leftReleased)
         {
@@ -1803,7 +1810,17 @@ public class Game1 : Game
             if (_isPanning)
             {
                 _isPanning = false;
-                _status = "表示位置を移動しました。空白をドラッグするとまた移動できます。";
+                if (!_panMoved)
+                {
+                    _selectedNode = null;
+                    _selectedTransition = null;
+                    _status = "選択を解除しました。";
+                }
+                else
+                {
+                    _status = "表示位置を移動しました。空白をドラッグするとまた移動できます。";
+                }
+                _panMoved = false;
             }
         }
     }
