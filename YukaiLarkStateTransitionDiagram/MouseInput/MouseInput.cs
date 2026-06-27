@@ -550,25 +550,6 @@ public partial class Game1
         transition.LabelOffset = labelCenter - anchor;
     }
 
-    private static float FindNearestTransitionT(Vector2 point, Vector2 start, Vector2 control1, Vector2 control2, Vector2 end)
-    {
-        const int samples = 64;
-        var nearestT = 0f;
-        var nearestDistance = float.MaxValue;
-        for (var i = 0; i <= samples; i++)
-        {
-            var t = i / (float)samples;
-            var candidate = EdgeRenderer.GetTransitionPoint(start, control1, control2, end, t);
-            var distance = Vector2.DistanceSquared(point, candidate);
-            if (distance < nearestDistance)
-            {
-                nearestDistance = distance;
-                nearestT = t;
-            }
-        }
-
-        return nearestT;
-    }
     private DiagramTransition? FindTransitionAt(Vector2 position)
     {
         foreach (var transition in _transitions)
