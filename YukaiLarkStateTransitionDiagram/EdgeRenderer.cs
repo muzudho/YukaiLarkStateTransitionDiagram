@@ -172,7 +172,7 @@ public sealed class EdgeRenderer
             return;
         }
 
-        var texture = _getLabelTexture(label, selected);
+        var texture = _getLabelTexture(label, false);
         var center = GetTransitionLabelCenter(start, control1, control2, end, transition.LabelSide, texture);
         var position = center - new Vector2(texture.Width / 2f, texture.Height / 2f);
         var labelColor = selected ? Theme.SelectedTransitionLabelColor : Theme.TransitionLabelColor;
