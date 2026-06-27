@@ -3,9 +3,9 @@ namespace YukaiLarkStateTransitionDiagram.Navigation;
 using System;
 using YukaiLarkStateTransitionDiagram;
 using System.Collections.Generic;
+using YukaiLarkStateTransitionDiagram.Theme;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using YukaiLarkStateTransitionDiagram.Theme;
 
 /// <summary>
 /// ショートカットキーとその名前の描画

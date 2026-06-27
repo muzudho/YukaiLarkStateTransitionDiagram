@@ -2,6 +2,7 @@ namespace YukaiLarkStateTransitionDiagram.MiniMap;
 
 using System;
 using System.Collections.Generic;
+using YukaiLarkStateTransitionDiagram.Theme;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
