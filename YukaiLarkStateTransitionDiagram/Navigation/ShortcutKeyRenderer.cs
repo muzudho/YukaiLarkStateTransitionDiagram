@@ -175,7 +175,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
                 new HelpPage
                 (
                     [
-                        new HelpHint("0-9", "お気に入りテーマ"),
+                        new HelpHint("0-9", "お気に入りテーマ入替"),
                         new HelpHint("PageUp/PageDown", "テーマ表ページ切替"),
                         new HelpHint("クリック", "プレビュー切替"),
                         new HelpHint("Esc", "閉じる")

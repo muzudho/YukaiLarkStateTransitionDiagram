@@ -30,7 +30,7 @@ public class Game1 : Game
     private const float ExportFlashDurationSeconds = 0.18f;
     private const float ExportPhotoPreviewDurationSeconds = 1.35f;
     private const int RecentFileMenuMaxItems = AppConfig.MaxRecentFiles;
-    private const int ThemeMenuPageSize = 10;
+    private const int ThemeMenuPageSize = 5;
     private const int MaxFileNameLength = 255;
     private const string YukaiLarkMascotTexturePath = "Assets/BrandLogo/yukai-lark-logo.png";
     private static readonly Keys[] ThemeDigitKeys =
@@ -66,6 +66,7 @@ public class Game1 : Game
     private readonly Stack<DiagramDocument> _redoHistory = new();
     private readonly Dictionary<string, Texture2D> _labelTextureCache = new();
     private readonly Dictionary<string, Texture2D> _uiTextTextureCache = new();
+    private readonly List<IKeyCapTheme> _themeShortcutThemes = KeyCapThemes.ShortcutThemes.ToList();
     private PrimitiveRenderer _primitiveRenderer = null!;
     private EdgeRenderer _edgeRenderer = null!;
     private NodeRenderer _nodeRenderer = null!;
@@ -476,7 +477,7 @@ public class Game1 : Game
         }
         if (TryGetThemeShortcutIndex(keyboard, out var themeIndex))
         {
-            ApplyKeyCapTheme(themeIndex);
+            ApplyThemeShortcut(themeIndex);
             return;
         }
         if (_yukaiLarkAssistant.ShouldRunFromKeyboard(CreateAssistantContext(), keyboard, _previousKeyboard, out var assistKind))
@@ -669,7 +670,7 @@ public class Game1 : Game
     private void OpenThemeMenu()
     {
         _isThemeMenuOpen = true;
-        _themeMenuPage = GetThemePageForIndex(GetCurrentThemeIndex());
+        _themeMenuPage = GetThemePageForTheme(_keyCapTheme);
         _status = "テーマを選んでください。クリックや0-9で切り替え、Escまたは閉じるボタンで閉じます。";
     }
 
@@ -701,8 +702,7 @@ public class Game1 : Game
 
         if (TryGetThemeShortcutIndex(keyboard, out var themeIndex))
         {
-            ApplyKeyCapTheme(themeIndex);
-            _themeMenuPage = GetThemePageForIndex(themeIndex);
+            ApplyThemeShortcut(themeIndex);
         }
     }
 
@@ -728,7 +728,7 @@ public class Game1 : Game
             var themeIndex = startIndex + visibleIndex;
             if (GetThemeMenuItemRectangle(visibleIndex).Contains(point))
             {
-                ApplyKeyCapTheme(themeIndex);
+                ApplyKeyCapTheme(KeyCapThemes.AllThemes[themeIndex]);
                 return;
             }
         }
@@ -786,9 +786,9 @@ public class Game1 : Game
         DrawThemeMenuCloseButton();
 
         var pageCount = GetThemeMenuPageCount();
-        var pageText = $"{_themeMenuPage + 1}/{pageCount}";
-        var pageTexture = GetUiTextTexture(pageText, 14, true);
-        DrawUiText(pageText, new Vector2(panel.Right - pageTexture.Width - 24, panel.Y + 64), _boardTheme.PanelMutedTextColor, 14, true);
+        var pageText = $"({_themeMenuPage + 1}/{pageCount})";
+        var pageTexture = GetUiTextTexture(pageText, 15, true);
+        DrawUiText(pageText, new Vector2(panel.Right - pageTexture.Width - 124, panel.Y + 26), _boardTheme.PanelMutedTextColor, 15, true);
 
         var startIndex = GetThemeMenuVisibleStartIndex();
         var visibleCount = GetThemeMenuVisibleItemCount();
@@ -808,7 +808,7 @@ public class Game1 : Game
 
     private void DrawThemeMenuItem(int themeIndex, int visibleIndex)
     {
-        var theme = KeyCapThemes.ShortcutThemes[themeIndex];
+        var theme = KeyCapThemes.AllThemes[themeIndex];
         var bounds = GetThemeMenuItemRectangle(visibleIndex);
         var selected = ReferenceEquals(theme, _keyCapTheme);
         var themeBoard = BoardThemes.ForKeyCapTheme(theme);
@@ -820,8 +820,9 @@ public class Game1 : Game
         _spriteBatch.Draw(_pixel, new Rectangle(bounds.X + 12, bounds.Y + 10, 34, 24), theme.FaceColor);
         DrawScreenRectangleOutline(new Rectangle(bounds.X + 12, bounds.Y + 10, 34, 24), theme.BottomEdgeColor, 1);
 
-        var shortcut = themeIndex.ToString();
-        DrawUiText(shortcut, new Vector2(bounds.X + 58, bounds.Y + 12), theme.LabelTextColor, 16, true);
+        var shortcut = GetShortcutIndexForTheme(theme);
+        var shortcutText = shortcut is null ? "-" : shortcut.Value.ToString();
+        DrawUiText(shortcutText, new Vector2(bounds.X + 58, bounds.Y + 12), theme.LabelTextColor, 16, true);
         DrawUiText(theme.Name, new Vector2(bounds.X + 92, bounds.Y + 11), themeBoard.PanelPrimaryTextColor, 17, true);
         if (selected)
         {
@@ -855,31 +856,47 @@ public class Game1 : Game
     }
 
     private int GetThemeMenuVisibleStartIndex()
-        => Math.Min(_themeMenuPage * ThemeMenuPageSize, Math.Max(0, KeyCapThemes.ShortcutThemes.Count - 1));
+        => Math.Min(_themeMenuPage * ThemeMenuPageSize, Math.Max(0, KeyCapThemes.AllThemes.Count - 1));
 
     private int GetThemeMenuVisibleItemCount()
     {
         var startIndex = GetThemeMenuVisibleStartIndex();
-        return Math.Min(ThemeMenuPageSize, KeyCapThemes.ShortcutThemes.Count - startIndex);
+        return Math.Min(ThemeMenuPageSize, KeyCapThemes.AllThemes.Count - startIndex);
     }
 
     private int GetThemeMenuPageCount()
-        => Math.Max(1, (int)MathF.Ceiling(KeyCapThemes.ShortcutThemes.Count / (float)ThemeMenuPageSize));
+        => Math.Max(1, (int)MathF.Ceiling(KeyCapThemes.AllThemes.Count / (float)ThemeMenuPageSize));
 
-    private int GetThemePageForIndex(int themeIndex)
-        => Math.Clamp(themeIndex, 0, Math.Max(0, KeyCapThemes.ShortcutThemes.Count - 1)) / ThemeMenuPageSize;
-
-    private int GetCurrentThemeIndex()
+    private int GetThemePageForTheme(IKeyCapTheme theme)
     {
-        for (var i = 0; i < KeyCapThemes.ShortcutThemes.Count; i++)
+        var themeIndex = GetThemeIndex(theme);
+        return Math.Clamp(themeIndex, 0, Math.Max(0, KeyCapThemes.AllThemes.Count - 1)) / ThemeMenuPageSize;
+    }
+
+    private int GetThemeIndex(IKeyCapTheme theme)
+    {
+        for (var i = 0; i < KeyCapThemes.AllThemes.Count; i++)
         {
-            if (ReferenceEquals(KeyCapThemes.ShortcutThemes[i], _keyCapTheme))
+            if (ReferenceEquals(KeyCapThemes.AllThemes[i], theme))
             {
                 return i;
             }
         }
 
         return 0;
+    }
+
+    private int? GetShortcutIndexForTheme(IKeyCapTheme theme)
+    {
+        for (var i = 0; i < _themeShortcutThemes.Count; i++)
+        {
+            if (ReferenceEquals(_themeShortcutThemes[i], theme))
+            {
+                return i;
+            }
+        }
+
+        return null;
     }
 
     private void MoveThemeMenuPage(int delta)
@@ -1171,22 +1188,45 @@ public class Game1 : Game
         return false;
     }
 
-    private void ApplyKeyCapTheme(int themeIndex)
+    private void ApplyThemeShortcut(int shortcutIndex)
     {
-        if (themeIndex < 0 || themeIndex >= KeyCapThemes.ShortcutThemes.Count)
+        if (shortcutIndex < 0 || shortcutIndex >= _themeShortcutThemes.Count)
         {
             return;
         }
 
-        _keyCapTheme = KeyCapThemes.ShortcutThemes[themeIndex];
+        var previousTheme = _keyCapTheme;
+        var nextTheme = _themeShortcutThemes[shortcutIndex];
+        var previousShortcutIndex = GetShortcutIndexForTheme(previousTheme);
+        ApplyKeyCapTheme(nextTheme);
+        _themeMenuPage = GetThemePageForTheme(nextTheme);
+
+        if (!ReferenceEquals(previousTheme, nextTheme))
+        {
+            _themeShortcutThemes[shortcutIndex] = previousTheme;
+            if (previousShortcutIndex is not null && previousShortcutIndex.Value != shortcutIndex)
+            {
+                _themeShortcutThemes[previousShortcutIndex.Value] = nextTheme;
+            }
+
+            _status = $"テーマを {shortcutIndex}: {nextTheme.Name} に切り替えました。{shortcutIndex}キーには {previousTheme.Name} を割り当て直しました。";
+        }
+        else
+        {
+            _status = $"テーマ {shortcutIndex}: {nextTheme.Name} を選択中です。";
+        }
+    }
+
+    private void ApplyKeyCapTheme(IKeyCapTheme theme)
+    {
+        _keyCapTheme = theme;
         _boardTheme = BoardThemes.ForKeyCapTheme(_keyCapTheme);
         _edgeRenderer.Theme = _boardTheme;
         _nodeRenderer.Theme = _boardTheme;
         _shortcutKeyRenderer.KeyCapTheme = _keyCapTheme;
         _shortcutKeyRenderer.BoardTheme = _boardTheme;
-        _status = $"テーマを {themeIndex}: {_keyCapTheme.Name} に切り替えました。背景とPNG出力にも反映します。";
+        _status = $"テーマを {_keyCapTheme.Name} に切り替えました。背景とPNG出力にも反映します。";
     }
-
     private void HandleExportSelectionKeyboard(KeyboardState keyboard)
     {
         if (IsNewKeyPress(keyboard, Keys.Escape))

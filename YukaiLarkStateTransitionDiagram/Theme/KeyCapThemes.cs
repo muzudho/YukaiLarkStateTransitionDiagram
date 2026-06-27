@@ -19,6 +19,22 @@ public static class KeyCapThemes
     public static IKeyCapTheme Amber { get; } = new AmberKeyCapTheme();
     public static IKeyCapTheme Midnight { get; } = new MidnightKeyCapTheme();
 
+    public static IReadOnlyList<IKeyCapTheme> AllThemes { get; } =
+    [
+        YukaiLark,
+        Office,
+        Gaming,
+        Retro,
+        CopyPaper,
+        Girly,
+        Edo,
+        Hokusai,
+        Monochrome,
+        Mint,
+        Amber,
+        Midnight
+    ];
+
     public static IReadOnlyList<IKeyCapTheme> ShortcutThemes { get; } =
     [
         YukaiLark,
