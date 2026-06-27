@@ -226,6 +226,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
                     [
                         new HelpHint("Ctrl+O", "読込"),
                         new HelpHint("Ctrl+P", "PNG出力"),
+                        new HelpHint("T", "テーマ選択"),
                         new HelpHint("0-9", "テーマ")
                     ]
                 )
@@ -267,6 +268,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
                     [
                         new HelpHint("Ctrl+O", "読込"),
                         new HelpHint("Ctrl+P", "PNG出力"),
+                        new HelpHint("T", "テーマ選択"),
                         new HelpHint("0-9", "テーマ")
                     ]
                 )
@@ -306,6 +308,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
             (
                 [
                     new HelpHint("Ctrl+P", "PNG出力"),
+                    new HelpHint("T", "テーマ選択"),
                     new HelpHint("0-9", "テーマ"),
                     new HelpHint("空白ドラッグ", "表示移動")
                 ]

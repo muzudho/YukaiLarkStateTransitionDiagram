@@ -106,6 +106,7 @@ public class Game1 : Game
     private bool _isExportSelecting;
     private bool _isFileMenuOpen;
     private bool _isStartupFileMenu;
+    private bool _isThemeMenuOpen;
     private bool _isEditingFileName;
     private bool _exportSelectionDragging;
     private bool _hasExportSelection;
@@ -119,7 +120,7 @@ public class Game1 : Game
     private int _nextNodeId = 1;
     private string _status = DefaultStatus;
     private string _fileNameEditWarning = string.Empty;
-    private const string DefaultStatus = "N: 状態追加 / S: 開始マーク / Shift+ドラッグ: 遷移作成 / F2・Enter: ラベル編集 / Ctrl+Z/Y: 元に戻す/やり直し / Ctrl+S: 保存";
+    private const string DefaultStatus = "N: 状態追加 / S: 開始マーク / T: テーマ選択 / Shift+ドラッグ: 遷移作成 / F2・Enter: ラベル編集 / Ctrl+Z/Y: 元に戻す/やり直し / Ctrl+S: 保存";
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this)
@@ -165,6 +166,17 @@ public class Game1 : Game
         {
             HandleFileMenuKeyboard(keyboard);
             HandleFileMenuMouse(mouse);
+            UpdateMouseCursor(keyboard, mouse);
+            _previousKeyboard = keyboard;
+            _previousMouse = mouse;
+            base.Update(gameTime);
+            return;
+        }
+
+        if (_isThemeMenuOpen)
+        {
+            HandleThemeMenuKeyboard(keyboard);
+            HandleThemeMenuMouse(mouse);
             UpdateMouseCursor(keyboard, mouse);
             _previousKeyboard = keyboard;
             _previousMouse = mouse;
@@ -224,6 +236,7 @@ public class Game1 : Game
             _fileNameTextBoxController.GetDisplayCaretIndex(),
             ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0,
             _fileNameEditWarning);
+        DrawThemeButton(GraphicsDevice.Viewport);
 
         // ［開始マーク作成アシスト］の描画
         DrawYukaiLarkMascot(GraphicsDevice.Viewport, gameTime.TotalGameTime);
@@ -240,6 +253,7 @@ public class Game1 : Game
             _selectedTransition);
         DrawExportSelectionOverlay();
         DrawExportPhotoEffectOverlay();
+        DrawThemeMenuOverlay();
         DrawFileMenuOverlay();
         _spriteBatch.End();
         base.Draw(gameTime);
@@ -453,6 +467,11 @@ public class Game1 : Game
             BeginPngExportSelection();
             return;
         }
+        if (IsNewKeyPress(keyboard, Keys.T))
+        {
+            OpenThemeMenu();
+            return;
+        }
         if (TryGetThemeShortcutIndex(keyboard, out var themeIndex))
         {
             ApplyKeyCapTheme(themeIndex);
@@ -645,6 +664,155 @@ public class Game1 : Game
             .Take(RecentFileMenuMaxItems)
             .ToList();
 
+    private void OpenThemeMenu()
+    {
+        _isThemeMenuOpen = true;
+        _status = "テーマを選んでください。クリック、または0-9で切り替え。Esc/Tで閉じます。";
+    }
+
+    private void CloseThemeMenu()
+    {
+        _isThemeMenuOpen = false;
+    }
+
+    private void HandleThemeMenuKeyboard(KeyboardState keyboard)
+    {
+        if (IsNewKeyPress(keyboard, Keys.Escape) || IsNewKeyPress(keyboard, Keys.T))
+        {
+            CloseThemeMenu();
+            _status = "テーマ選択を閉じました。";
+            return;
+        }
+
+        if (TryGetThemeShortcutIndex(keyboard, out var themeIndex))
+        {
+            ApplyKeyCapTheme(themeIndex);
+            CloseThemeMenu();
+        }
+    }
+
+    private void HandleThemeMenuMouse(MouseState mouse)
+    {
+        if (mouse.LeftButton != ButtonState.Pressed || _previousMouse.LeftButton != ButtonState.Released)
+        {
+            return;
+        }
+
+        var point = mouse.Position;
+        if (!GetThemeMenuPanelRectangle().Contains(point))
+        {
+            CloseThemeMenu();
+            _status = "テーマ選択を閉じました。";
+            return;
+        }
+
+        for (var i = 0; i < KeyCapThemes.ShortcutThemes.Count; i++)
+        {
+            if (GetThemeMenuItemRectangle(i).Contains(point))
+            {
+                ApplyKeyCapTheme(i);
+                CloseThemeMenu();
+                return;
+            }
+        }
+    }
+
+    private void DrawThemeButton(Viewport viewport)
+    {
+        var bounds = GetThemeButtonRectangle(viewport);
+        if (bounds.Width <= 0)
+        {
+            return;
+        }
+
+        var label = $"テーマ: {_keyCapTheme.Name}";
+        _spriteBatch.Draw(_pixel, bounds, new Color(255, 255, 255, 30));
+        DrawScreenRectangleOutline(bounds, _boardTheme.HeaderBorderColor, 1);
+        DrawUiText("T", new Vector2(bounds.X + 8, bounds.Y + 6), _boardTheme.HeaderTitleTextColor, 13, true);
+        DrawUiText(label, new Vector2(bounds.X + 32, bounds.Y + 5), _boardTheme.HeaderTitleTextColor, 14, true);
+    }
+
+    private Rectangle GetThemeButtonRectangle(Viewport viewport)
+    {
+        if (viewport.Width < 480)
+        {
+            return Rectangle.Empty;
+        }
+
+        var label = $"テーマ: {_keyCapTheme.Name}";
+        var width = Math.Min(260, Math.Max(150, GetUiTextTexture(label, 14, true).Width + 48));
+        return new Rectangle(viewport.Width - width - 12, 8, width, 28);
+    }
+
+    private void DrawThemeMenuOverlay()
+    {
+        if (!_isThemeMenuOpen)
+        {
+            return;
+        }
+
+        var viewport = GraphicsDevice.Viewport;
+        _spriteBatch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), new Color(18, 26, 28, 150));
+
+        var panel = GetThemeMenuPanelRectangle();
+        _spriteBatch.Draw(_pixel, new Rectangle(panel.X + 6, panel.Y + 8, panel.Width, panel.Height), new Color(16, 22, 24, 105));
+        _spriteBatch.Draw(_pixel, panel, new Color(255, 253, 239, 245));
+        DrawScreenRectangleOutline(panel, new Color(83, 178, 176), 2);
+
+        DrawUiText("テーマ選択", new Vector2(panel.X + 24, panel.Y + 22), new Color(38, 55, 62), 24, true);
+        DrawUiText("クリック、または0-9キーで切り替えます。", new Vector2(panel.X + 24, panel.Y + 58), new Color(88, 105, 112), 15, false);
+
+        for (var i = 0; i < KeyCapThemes.ShortcutThemes.Count; i++)
+        {
+            DrawThemeMenuItem(i);
+        }
+    }
+
+    private void DrawThemeMenuItem(int index)
+    {
+        var theme = KeyCapThemes.ShortcutThemes[index];
+        var bounds = GetThemeMenuItemRectangle(index);
+        var selected = ReferenceEquals(theme, _keyCapTheme);
+        var fill = selected ? new Color(229, 249, 244, 255) : index % 2 == 0 ? new Color(250, 252, 246, 245) : new Color(238, 250, 239, 245);
+        var edge = selected ? new Color(83, 178, 176) : new Color(178, 219, 203);
+
+        _spriteBatch.Draw(_pixel, bounds, fill);
+        DrawScreenRectangleOutline(bounds, edge, selected ? 2 : 1);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X + 12, bounds.Y + 12, 28, 22), theme.FaceColor);
+        DrawScreenRectangleOutline(new Rectangle(bounds.X + 12, bounds.Y + 12, 28, 22), theme.BottomEdgeColor, 1);
+
+        var shortcut = index.ToString();
+        DrawUiText(shortcut, new Vector2(bounds.X + 52, bounds.Y + 13), new Color(51, 84, 102), 16, true);
+        DrawUiText(theme.Name, new Vector2(bounds.X + 82, bounds.Y + 12), new Color(38, 55, 62), 17, true);
+        if (selected)
+        {
+            DrawUiText("選択中", new Vector2(bounds.Right - 72, bounds.Y + 14), new Color(38, 119, 118), 14, true);
+        }
+    }
+
+    private Rectangle GetThemeMenuPanelRectangle()
+    {
+        var viewport = GraphicsDevice.Viewport;
+        var width = Math.Clamp(viewport.Width - 64, 560, 760);
+        var itemCount = KeyCapThemes.ShortcutThemes.Count;
+        var rows = (int)MathF.Ceiling(itemCount / 2f);
+        var height = Math.Min(viewport.Height - 64, 112 + rows * 54);
+        var x = (viewport.Width - width) / 2;
+        var y = Math.Max(24, (viewport.Height - height) / 2);
+        return new Rectangle(x, y, width, height);
+    }
+
+    private Rectangle GetThemeMenuItemRectangle(int index)
+    {
+        var panel = GetThemeMenuPanelRectangle();
+        var column = index % 2;
+        var row = index / 2;
+        var gap = 12;
+        var itemWidth = (panel.Width - 48 - gap) / 2;
+        var x = panel.X + 24 + column * (itemWidth + gap);
+        var y = panel.Y + 94 + row * 54;
+        return new Rectangle(x, y, itemWidth, 46);
+    }
     private void DrawFileMenuOverlay()
     {
         if (!_isFileMenuOpen)
@@ -1658,6 +1826,12 @@ public class Game1 : Game
         var snapNodes = !IsAltDown(keyboard);
         if (leftPressed)
         {
+            if (GetThemeButtonRectangle(GraphicsDevice.Viewport).Contains(mouse.Position))
+            {
+                OpenThemeMenu();
+                return;
+            }
+
             if (HeaderRenderer.GetTitleHitBounds(GraphicsDevice.Viewport).Contains(mouse.Position))
             {
                 BeginFileNameEdit();
@@ -1735,7 +1909,7 @@ public class Game1 : Game
                 _dragOffset = mousePosition - node.Position;
                 CaptureDraggedNodeTransitionSnapshots(node);
                 BeginPendingHistory();
-                _status = "状態を選択しました。F2・Enterでラベル編集、Tで開始マーク切替。";
+                _status = "状態を選択しました。F2・Enterでラベル編集、Cで色変更、Tでテーマ選択。";
             }
             else if (transition is null)
             {
@@ -1916,7 +2090,7 @@ public class Game1 : Game
             return MouseCursor.SizeAll;
         }
 
-        if (_isFileMenuOpen || _isExportSelecting || IsEditingLabel || _isEditingFileName)
+        if (_isFileMenuOpen || _isThemeMenuOpen || _isExportSelecting || IsEditingLabel || _isEditingFileName)
         {
             return MouseCursor.Arrow;
         }
