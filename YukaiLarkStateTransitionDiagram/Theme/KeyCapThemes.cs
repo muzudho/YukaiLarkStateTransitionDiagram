@@ -28,7 +28,18 @@ public static class KeyCapThemes
     public static IKeyCapTheme Snow { get; } = new SnowKeyCapTheme();
     public static IKeyCapTheme Rainy { get; } = new RainyKeyCapTheme();
     public static IKeyCapTheme NightSky { get; } = new NightSkyKeyCapTheme();
-
+    public static IKeyCapTheme Grapefruit { get; } = new GrapefruitKeyCapTheme();
+    public static IKeyCapTheme Lemon { get; } = new LemonKeyCapTheme();
+    public static IKeyCapTheme Lime { get; } = new LimeKeyCapTheme();
+    public static IKeyCapTheme Orange { get; } = new OrangeKeyCapTheme();
+    public static IKeyCapTheme Peach { get; } = new PeachKeyCapTheme();
+    public static IKeyCapTheme Strawberry { get; } = new StrawberryKeyCapTheme();
+    public static IKeyCapTheme Marine { get; } = new MarineKeyCapTheme();
+    public static IKeyCapTheme Sky { get; } = new SkyKeyCapTheme();
+    public static IKeyCapTheme Sun { get; } = new SunKeyCapTheme();
+    public static IKeyCapTheme Cloud { get; } = new CloudKeyCapTheme();
+    public static IKeyCapTheme Moon { get; } = new MoonKeyCapTheme();
+    public static IKeyCapTheme Star { get; } = new StarKeyCapTheme();
     public static IReadOnlyList<IKeyCapTheme> AllThemes { get; } =
     [
         YukaiLark,
@@ -52,7 +63,19 @@ public static class KeyCapThemes
         Desert,
         Snow,
         Rainy,
-        NightSky
+        NightSky,
+        Grapefruit,
+        Lemon,
+        Lime,
+        Orange,
+        Peach,
+        Strawberry,
+        Marine,
+        Sky,
+        Sun,
+        Cloud,
+        Moon,
+        Star
     ];
 
     public static IReadOnlyList<IKeyCapTheme> ShortcutThemes { get; } =
@@ -69,6 +92,3 @@ public static class KeyCapThemes
         Amber
     ];
 }
-
-
-
