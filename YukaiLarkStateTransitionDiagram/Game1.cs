@@ -110,6 +110,8 @@ public class Game1 : Game
     private bool _isStartupFileMenu;
     private bool _isThemeMenuOpen;
     private int _themeMenuPage;
+    private IKeyCapTheme? _themeMenuOriginalTheme;
+    private List<IKeyCapTheme>? _themeMenuOriginalShortcutThemes;
     private bool _isEditingFileName;
     private bool _exportSelectionDragging;
     private bool _hasExportSelection;
@@ -670,21 +672,57 @@ public class Game1 : Game
     private void OpenThemeMenu()
     {
         _isThemeMenuOpen = true;
+        _themeMenuOriginalTheme = _keyCapTheme;
+        _themeMenuOriginalShortcutThemes = _themeShortcutThemes.ToList();
         _themeMenuPage = GetThemePageForTheme(_keyCapTheme);
-        _status = "テーマを選んでください。クリックや0-9で切り替え、Escまたは閉じるボタンで閉じます。";
+        _status = "テーマを選んでください。クリックや0-9で試し、決定またはキャンセルで閉じます。";
     }
 
     private void CloseThemeMenu()
     {
         _isThemeMenuOpen = false;
+        _themeMenuOriginalTheme = null;
+        _themeMenuOriginalShortcutThemes = null;
+    }
+
+    private void ConfirmThemeMenu()
+    {
+        var confirmedTheme = _keyCapTheme;
+        CloseThemeMenu();
+        _status = $"テーマを {confirmedTheme.Name} に決定しました。";
+    }
+
+    private void CancelThemeMenu()
+    {
+        var originalTheme = _themeMenuOriginalTheme;
+        var originalShortcutThemes = _themeMenuOriginalShortcutThemes;
+        if (originalTheme is not null)
+        {
+            ApplyKeyCapTheme(originalTheme);
+            _themeMenuPage = GetThemePageForTheme(originalTheme);
+        }
+
+        if (originalShortcutThemes is not null)
+        {
+            _themeShortcutThemes.Clear();
+            _themeShortcutThemes.AddRange(originalShortcutThemes);
+        }
+
+        CloseThemeMenu();
+        _status = "テーマ選択をキャンセルしました。";
     }
 
     private void HandleThemeMenuKeyboard(KeyboardState keyboard)
     {
         if (IsNewKeyPress(keyboard, Keys.Escape))
         {
-            CloseThemeMenu();
-            _status = "テーマ選択を閉じました。";
+            CancelThemeMenu();
+            return;
+        }
+
+        if (IsNewKeyPress(keyboard, Keys.Enter))
+        {
+            ConfirmThemeMenu();
             return;
         }
 
@@ -714,10 +752,15 @@ public class Game1 : Game
         }
 
         var point = mouse.Position;
-        if (GetThemeMenuCloseButtonRectangle().Contains(point))
+        if (GetThemeMenuConfirmButtonRectangle().Contains(point))
         {
-            CloseThemeMenu();
-            _status = "テーマ選択を閉じました。";
+            ConfirmThemeMenu();
+            return;
+        }
+
+        if (GetThemeMenuCancelButtonRectangle().Contains(point))
+        {
+            CancelThemeMenu();
             return;
         }
 
@@ -783,12 +826,12 @@ public class Game1 : Game
 
         DrawUiText("テーマ選択", new Vector2(panel.X + 24, panel.Y + 20), _boardTheme.PanelPrimaryTextColor, 24, true);
         DrawUiText("クリックや0-9キーで切り替えます。後ろの画面で見た目を確認できます。", new Vector2(panel.X + 24, panel.Y + 56), _boardTheme.PanelSecondaryTextColor, 15, false);
-        DrawThemeMenuCloseButton();
+        DrawThemeMenuActionButtons();
 
         var pageCount = GetThemeMenuPageCount();
         var pageText = $"({_themeMenuPage + 1}/{pageCount})";
         var pageTexture = GetUiTextTexture(pageText, 15, true);
-        DrawUiText(pageText, new Vector2(panel.Right - pageTexture.Width - 124, panel.Y + 26), _boardTheme.PanelMutedTextColor, 15, true);
+        DrawUiText(pageText, new Vector2(panel.Right - pageTexture.Width - 24, panel.Y + 62), _boardTheme.PanelMutedTextColor, 15, true);
 
         var startIndex = GetThemeMenuVisibleStartIndex();
         var visibleCount = GetThemeMenuVisibleItemCount();
@@ -798,12 +841,19 @@ public class Game1 : Game
         }
     }
 
-    private void DrawThemeMenuCloseButton()
+    private void DrawThemeMenuActionButtons()
     {
-        var bounds = GetThemeMenuCloseButtonRectangle();
+        DrawThemeMenuActionButton(GetThemeMenuConfirmButtonRectangle(), "このテーマにする");
+        DrawThemeMenuActionButton(GetThemeMenuCancelButtonRectangle(), "キャンセル");
+    }
+
+    private void DrawThemeMenuActionButton(Rectangle bounds, string label)
+    {
         _spriteBatch.Draw(_pixel, bounds, WithAlpha(_keyCapTheme.FaceColor, 228));
         DrawScreenRectangleOutline(bounds, WithAlpha(_keyCapTheme.BottomEdgeColor, 232), 1);
-        DrawUiText("閉じる", new Vector2(bounds.X + 16, bounds.Y + 7), _keyCapTheme.LabelTextColor, 14, true);
+        var labelTexture = GetUiTextTexture(label, 14, true);
+        var labelX = bounds.X + Math.Max(8, (bounds.Width - labelTexture.Width) / 2);
+        DrawUiText(label, new Vector2(labelX, bounds.Y + 8), _keyCapTheme.LabelTextColor, 14, true);
     }
 
     private void DrawThemeMenuItem(int themeIndex, int visibleIndex)
@@ -836,7 +886,7 @@ public class Game1 : Game
         var viewport = GraphicsDevice.Viewport;
         var width = Math.Clamp(viewport.Width - 64, 520, 680);
         var visibleCount = GetThemeMenuVisibleItemCount();
-        var height = Math.Min(viewport.Height - 64, 132 + visibleCount * 48);
+        var height = Math.Min(viewport.Height - 64, 148 + visibleCount * 48);
         var x = (viewport.Width - width) / 2;
         var y = Math.Max(24, (viewport.Height - height) / 2);
         return new Rectangle(x, y, width, height);
@@ -850,10 +900,16 @@ public class Game1 : Game
         return new Rectangle(x, y, panel.Width - 48, 40);
     }
 
-    private Rectangle GetThemeMenuCloseButtonRectangle()
+    private Rectangle GetThemeMenuConfirmButtonRectangle()
     {
         var panel = GetThemeMenuPanelRectangle();
-        return new Rectangle(panel.Right - 102, panel.Y + 20, 78, 30);
+        return new Rectangle(panel.Right - 174, panel.Bottom - 44, 150, 32);
+    }
+
+    private Rectangle GetThemeMenuCancelButtonRectangle()
+    {
+        var panel = GetThemeMenuPanelRectangle();
+        return new Rectangle(panel.Right - 288, panel.Bottom - 44, 102, 32);
     }
 
     private int GetThemeMenuVisibleStartIndex()
