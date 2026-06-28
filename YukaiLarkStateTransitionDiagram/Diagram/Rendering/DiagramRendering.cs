@@ -104,7 +104,11 @@ public partial class Game1
             };
             if (center != Vector2.Zero)
             {
-                _edgeRenderer.DrawTransitionHandleCue(center);
+                var controlHandle = handle.Kind is TransitionHandleKind.ControlPoint1
+                    or TransitionHandleKind.ControlPoint2
+                    or TransitionHandleKind.SegmentControlPoint1
+                    or TransitionHandleKind.SegmentControlPoint2;
+                _edgeRenderer.DrawTransitionHandleCue(center, controlHandle);
             }
             return;
         }

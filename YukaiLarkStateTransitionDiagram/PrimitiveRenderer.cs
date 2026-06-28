@@ -32,6 +32,12 @@ public sealed class PrimitiveRenderer
         DrawCircleOutline(center, 8f, outlineColor, 2f);
     }
 
+    public void DrawDiamondHandle(Vector2 center, Color color, Color outlineColor)
+    {
+        DrawDiamond(center, 9f, color);
+        DrawDiamondOutline(center, 9f, outlineColor, 2f);
+    }
+
     /// <summary>
     /// 線を描く。
     /// </summary>
@@ -88,5 +94,27 @@ public sealed class PrimitiveRenderer
             DrawLine(previous, current, color, thickness);
             previous = current;
         }
+    }
+
+    private void DrawDiamond(Vector2 center, float radius, Color color)
+    {
+        for (var y = -radius; y <= radius; y++)
+        {
+            var halfWidth = radius - MathF.Abs(y);
+            _spriteBatch.Draw(_pixel, new Rectangle((int)(center.X - halfWidth), (int)(center.Y + y), (int)(halfWidth * 2), 1), color);
+        }
+    }
+
+    private void DrawDiamondOutline(Vector2 center, float radius, Color color, float thickness)
+    {
+        var top = center + new Vector2(0f, -radius);
+        var right = center + new Vector2(radius, 0f);
+        var bottom = center + new Vector2(0f, radius);
+        var left = center + new Vector2(-radius, 0f);
+
+        DrawLine(top, right, color, thickness);
+        DrawLine(right, bottom, color, thickness);
+        DrawLine(bottom, left, color, thickness);
+        DrawLine(left, top, color, thickness);
     }
 }

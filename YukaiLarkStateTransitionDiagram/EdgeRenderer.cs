@@ -74,8 +74,8 @@ public sealed class EdgeRenderer
             GetTransitionPathSegmentControlPoints(points, i, transition.SegmentControls, out var control1, out var control2);
             _primitiveRenderer.DrawLine(points[i], control1, Theme.TransitionGuideColor, 1f);
             _primitiveRenderer.DrawLine(points[i + 1], control2, Theme.TransitionGuideColor, 1f);
-            _primitiveRenderer.DrawHandle(control1, Theme.TransitionControlHandleColor, Theme.HandleOutlineColor);
-            _primitiveRenderer.DrawHandle(control2, Theme.TransitionControlHandleColor, Theme.HandleOutlineColor);
+            DrawTransitionControlHandle(control1);
+            DrawTransitionControlHandle(control2);
         }
         for (var i = 1; i < points.Count - 1; i++)
         {
@@ -158,8 +158,8 @@ public sealed class EdgeRenderer
         _primitiveRenderer.DrawLine(end, control2, Theme.TransitionGuideColor, 1f);
         _primitiveRenderer.DrawHandle(start, Theme.TransitionHandleColor, Theme.HandleOutlineColor);
         _primitiveRenderer.DrawHandle(end, Theme.TransitionHandleColor, Theme.HandleOutlineColor);
-        _primitiveRenderer.DrawHandle(control1, Theme.TransitionControlHandleColor, Theme.HandleOutlineColor);
-        _primitiveRenderer.DrawHandle(control2, Theme.TransitionControlHandleColor, Theme.HandleOutlineColor);
+        DrawTransitionControlHandle(control1);
+        DrawTransitionControlHandle(control2);
     }
 
 
@@ -167,6 +167,11 @@ public sealed class EdgeRenderer
     {
         _primitiveRenderer.DrawHandle(start, Theme.TransitionHandleColor, Theme.HandleOutlineColor);
         _primitiveRenderer.DrawHandle(end, Theme.TransitionHandleColor, Theme.HandleOutlineColor);
+    }
+
+    private void DrawTransitionControlHandle(Vector2 center)
+    {
+        _primitiveRenderer.DrawDiamondHandle(center, Theme.TransitionControlHandleColor, Theme.HandleOutlineColor);
     }
 
     /// <summary>
@@ -200,8 +205,14 @@ public sealed class EdgeRenderer
     /// ベジェ曲線の矢印を描く
     /// </summary>
     /// <param name="center"></param>
-    public void DrawTransitionHandleCue(Vector2 center)
+    public void DrawTransitionHandleCue(Vector2 center, bool controlHandle = false)
     {
+        if (controlHandle)
+        {
+            _primitiveRenderer.DrawDiamondHandle(center, Theme.SelectedTransitionLineColor * 0.72f, Theme.SelectedTransitionLineColor);
+            return;
+        }
+
         _primitiveRenderer.DrawCircleOutline(center, 13f, Theme.SelectedTransitionLineColor, 3f);
     }
 
