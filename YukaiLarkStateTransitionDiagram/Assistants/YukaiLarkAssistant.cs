@@ -118,6 +118,11 @@ internal sealed class YukaiLarkAssistant
             && (kind == YukaiLarkAssistKind.CreateStateNode || kind == YukaiLarkAssistKind.CreateSecondStateNode);
     }
 
+    public bool ShouldDrawStateNodeLabelEditGhost(YukaiLarkAssistantContext context)
+        => !IsCompletedAssistActive
+            && IsAssistGhostReady
+            && GetAssistKind(context) == YukaiLarkAssistKind.EditStateNodeLabel;
+
     public bool ShouldDrawTransitionGhost(YukaiLarkAssistantContext context)
     {
         var kind = GetAssistKind(context);
@@ -257,6 +262,11 @@ internal sealed class YukaiLarkAssistant
             return YukaiLarkAssistKind.CreateStateNode;
         }
 
+        if (context.HasDefaultStateNodeLabel)
+        {
+            return YukaiLarkAssistKind.EditStateNodeLabel;
+        }
+
         if (!context.HasStartToNormalTransition)
         {
             return YukaiLarkAssistKind.CreateTransition;
@@ -308,6 +318,7 @@ internal sealed class YukaiLarkAssistant
         {
             YukaiLarkAssistKind.CreateStartMarker => "ユカイラーク: わたしの名前はユカイラークです。開始マークを作れます。",
             YukaiLarkAssistKind.CreateStateNode => "ユカイラーク: 次の状態ノードを作れます。Enterか鳥をクリック。",
+            YukaiLarkAssistKind.EditStateNodeLabel => $"ユカイラーク: {context.DefaultStateNodeLabelSummary} のラベルを編集しますか？ Enterか鳥をクリック。",
             YukaiLarkAssistKind.CreateSecondStateNode => "ユカイラーク: 通常ノード同士の遷移例用に、2つ目の状態を作れます。",
             YukaiLarkAssistKind.CreateTransition => GetTransitionStatusText(context),
             YukaiLarkAssistKind.AddTransitionEvent => $"ユカイラーク: {context.MissingTransitionEventSummary} 間の遷移にイベントがありません。Enterか鳥をクリック。",
@@ -358,6 +369,7 @@ internal sealed class YukaiLarkAssistant
         {
             YukaiLarkAssistKind.CreateStartMarker => ("わたしの名前はユカイラークです", "開始マークを作る？ Enter または鳥をクリック"),
             YukaiLarkAssistKind.CreateStateNode => ("次の状態を作る？", "Enter または鳥をクリック"),
+            YukaiLarkAssistKind.EditStateNodeLabel => ("ノードのラベルを編集する？", $"{context.DefaultStateNodeLabelSummary} の名前を入力できます"),
             YukaiLarkAssistKind.CreateSecondStateNode => ("2つ目の状態を作る？", "作らないときは数秒待つと次へ進みます"),
             YukaiLarkAssistKind.CreateTransition => GetTransitionBubbleText(context),
             YukaiLarkAssistKind.AddTransitionEvent => ("イベントを追加する？", $"{context.MissingTransitionEventSummary} 間の遷移"),
@@ -450,6 +462,7 @@ internal sealed class YukaiLarkAssistant
             YukaiLarkAssistKind.CreateStartMarker => ("ユカイラークが作図しました", "開始マークを追加し、開始マークにして選択しました。", "手動なら Sで開始マークを追加できます。"),
             YukaiLarkAssistKind.DeleteStartMarker => ("ユカイラークが気づきました", "開始マークを削除したんですね？", "必要なら Ctrl+Z で元に戻せます。"),
             YukaiLarkAssistKind.CreateStateNode => ("ユカイラークが作図しました", "次の状態ノードを追加し、選択しました。", "手動なら Nで状態追加、ドラッグで位置調整です。"),
+            YukaiLarkAssistKind.EditStateNodeLabel => ("ユカイラークが見つけました", "状態ノードのラベル入力を開始しました。", "状態名を入力して Enterで確定します。"),
             YukaiLarkAssistKind.CreateSecondStateNode => ("ユカイラークが作図しました", "2つ目の状態ノードを追加し、選択しました。", "次は通常ノード同士の遷移をつなげます。"),
             YukaiLarkAssistKind.CreateTransition => ("ユカイラークが作図しました", "遷移を作成しました。", "通常ノード同士の遷移ならイベントを付けられます。"),
             YukaiLarkAssistKind.AddTransitionEvent => ("ユカイラークが見つけました", "イベント未設定の遷移を選択しました。", "イベント名を入力して Enterで確定します。"),
@@ -464,6 +477,8 @@ internal readonly record struct YukaiLarkAssistantContext(
     bool HasStartMarker,
     bool HasEndMarker,
     int NormalNodeCount,
+    bool HasDefaultStateNodeLabel,
+    string DefaultStateNodeLabelSummary,
     bool HasStartToNormalTransition,
     bool HasNormalToNormalTransition,
     bool HasNormalToEndTransition,
@@ -481,6 +496,7 @@ internal enum YukaiLarkAssistKind
     CreateStartMarker,
     DeleteStartMarker,
     CreateStateNode,
+    EditStateNodeLabel,
     CreateSecondStateNode,
     CreateTransition,
     AddTransitionEvent,

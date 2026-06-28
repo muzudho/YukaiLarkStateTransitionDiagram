@@ -36,6 +36,7 @@ internal static class YukaiLarkAssistOperations
         {
             YukaiLarkAssistKind.CreateStartMarker => CreateStartMarker(operation),
             YukaiLarkAssistKind.CreateStateNode => CreateStateNode(operation, YukaiLarkAssistKind.CreateStateNode),
+            YukaiLarkAssistKind.EditStateNodeLabel => EditStateNodeLabel(operation),
             YukaiLarkAssistKind.CreateSecondStateNode => CreateStateNode(operation, YukaiLarkAssistKind.CreateSecondStateNode),
             YukaiLarkAssistKind.CreateTransition => CreateTransition(operation, YukaiLarkAssistKind.CreateTransition),
             YukaiLarkAssistKind.ConnectUnreachedStateNode => CreateTransition(operation, YukaiLarkAssistKind.ConnectUnreachedStateNode),
@@ -134,6 +135,34 @@ internal static class YukaiLarkAssistOperations
             status,
             selectedNode is not null);
     }
+
+    private static YukaiLarkAssistOperationResult EditStateNodeLabel(YukaiLarkAssistOperation operation)
+    {
+        var node = operation.Nodes
+            .Where(IsDefaultLabeledNormalNode)
+            .OrderBy(n => n.Id)
+            .FirstOrDefault();
+        if (node is null)
+        {
+            return new YukaiLarkAssistOperationResult(
+                operation.NextNodeId,
+                null,
+                null,
+                "自動ラベルの通常ノードはありません。",
+                false);
+        }
+
+        return new YukaiLarkAssistOperationResult(
+            operation.NextNodeId,
+            node,
+            null,
+            $"{node.Label} のラベルを入力中です。Enterで確定します。",
+            true);
+    }
+
+    private static bool IsDefaultLabeledNormalNode(DiagramNode node)
+        => node.Kind == NodeKind.Normal
+            && string.Equals(node.Label, $"状態{node.Id}", StringComparison.Ordinal);
 
     private static YukaiLarkAssistOperationResult ShiftDiagramLeft(YukaiLarkAssistOperation operation)
     {

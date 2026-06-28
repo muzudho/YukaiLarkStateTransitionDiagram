@@ -241,6 +241,10 @@ public partial class Game1
             var inactive = includeInteraction && IsInactiveDuringTransitionLink(node);
             _nodeRenderer.DrawNode(node, includeInteraction && node == _selectedNode, _editingNode, editingDisplayLabel, editingDisplayCaretIndex, showEditingCaret, totalGameTime, inactive, node == hoveredNode);
         }
+        if (includeInteraction)
+        {
+            DrawStateNodeLabelEditGhost(totalGameTime);
+        }
         if (includeInteraction && _draggedNode is not null && !IsAltDown(Keyboard.GetState()))
         {
             _nodeRenderer.DrawNodeSnapIndicator(_draggedNode, totalGameTime);
@@ -319,6 +323,26 @@ public partial class Game1
             Kind = NodeKind.Normal
         };
         _nodeRenderer.DrawStateNodeGhost(ghostNode, 1f);
+    }
+
+    private void DrawStateNodeLabelEditGhost(TimeSpan totalGameTime)
+    {
+        var context = CreateAssistantContext();
+        if (!_yukaiLarkAssistant.ShouldDrawStateNodeLabelEditGhost(context))
+        {
+            return;
+        }
+
+        var node = _nodes
+            .Where(IsDefaultLabeledNormalNode)
+            .OrderBy(n => n.Id)
+            .FirstOrDefault();
+        if (node is null)
+        {
+            return;
+        }
+
+        _nodeRenderer.DrawStateNodeLabelEditGhost(node, totalGameTime);
     }
 
     private void DrawTransitionGhost(TimeSpan totalGameTime)

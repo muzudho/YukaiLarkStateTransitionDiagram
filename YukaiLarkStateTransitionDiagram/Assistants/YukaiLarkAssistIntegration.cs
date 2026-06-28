@@ -24,6 +24,8 @@ public partial class Game1
                 .OrderByDescending(node => (node.Position - startMarker.Position).LengthSquared())
                 .ThenBy(node => node.Id)
                 .FirstOrDefault();
+        var defaultLabeledNormalNode = normalNodes.FirstOrDefault(IsDefaultLabeledNormalNode);
+        var defaultStateNodeLabelSummary = defaultLabeledNormalNode?.Label ?? string.Empty;
         var hasStartToNormalTransition = startMarker is not null
             && normalNodes.Count >= 1
             && _transitions.Any(t => t.SourceId == startMarker.Id && t.TargetId == normalNodes[0].Id);
@@ -49,6 +51,8 @@ public partial class Game1
             startMarker is not null,
             endMarker is not null,
             normalNodes.Count,
+            defaultLabeledNormalNode is not null,
+            defaultStateNodeLabelSummary,
             hasStartToNormalTransition,
             hasNormalToNormalTransition,
             hasNormalToEndTransition,
@@ -141,6 +145,10 @@ public partial class Game1
         distance = MathF.Floor(worldShift / DiagramNode.RadiusUnit) * DiagramNode.RadiusUnit;
         return distance > 0f;
     }
+    private static bool IsDefaultLabeledNormalNode(DiagramNode node)
+        => node.Kind == NodeKind.Normal
+            && string.Equals(node.Label, $"状態{node.Id}", StringComparison.Ordinal);
+
     private string GetMissingTransitionEventSummary()
     {
         var transition = _transitions.FirstOrDefault(t => CanTransitionHaveEvent(t) && string.IsNullOrWhiteSpace(t.Label));
@@ -188,6 +196,10 @@ public partial class Game1
         if (kind == YukaiLarkAssistKind.AddTransitionEvent && result.SelectedTransition is not null)
         {
             BeginTransitionLabelEdit(result.SelectedTransition);
+        }
+        if (kind == YukaiLarkAssistKind.EditStateNodeLabel && result.SelectedNode is not null)
+        {
+            BeginLabelEdit(result.SelectedNode);
         }
 
         if (result.Completed)
@@ -312,7 +324,6 @@ public partial class Game1
                 .OrderByDescending(node => (node.Position - startMarker.Position).LengthSquared())
                 .ThenBy(node => node.Id)
                 .FirstOrDefault();
-
         if (endMarker is not null
             && normalToEndSource is not null
             && !_transitions.Any(t => t.SourceId == normalToEndSource.Id && t.TargetId == endMarker.Id)

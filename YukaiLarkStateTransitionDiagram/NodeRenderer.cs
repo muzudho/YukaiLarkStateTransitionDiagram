@@ -134,6 +134,19 @@ public sealed class NodeRenderer
         DrawNodeLabel(node.Label, node.Position, editing: false, GetNodeLabelColor(fill, inactive: false) * (alpha * 0.78f));
     }
 
+    public void DrawStateNodeLabelEditGhost(DiagramNode node, TimeSpan totalGameTime)
+    {
+        var pulse = 0.5f + (MathF.Sin((float)totalGameTime.TotalSeconds * 5.8f) * 0.5f);
+        var bob = MathF.Sin((float)totalGameTime.TotalSeconds * 8.5f) * 2.4f;
+        var center = node.Position + new Vector2(0f, bob);
+        var fill = GetNormalNodeFillColor(node);
+
+        _primitiveRenderer.DrawCircle(center, node.Radius + 14f, fill * MathHelper.Lerp(0.10f, 0.18f, pulse));
+        _primitiveRenderer.DrawCircle(center, node.Radius + 9f, Theme.NodeGhostHaloColor * MathHelper.Lerp(0.22f, 0.34f, pulse));
+        _primitiveRenderer.DrawCircleOutline(center, node.Radius + 7f, Theme.NodeGhostInnerHaloColor * MathHelper.Lerp(0.60f, 0.82f, pulse), 3.2f);
+        DrawWobblingCircle(center, node.Radius + 13f, Theme.NodeGhostHaloColor * MathHelper.Lerp(0.58f, 0.86f, pulse), 2.4f, totalGameTime, 1.8f);
+    }
+
     /// <summary>
     /// ノードのリサイズハンドルを描画します。
     /// </summary>
