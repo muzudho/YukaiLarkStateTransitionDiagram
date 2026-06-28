@@ -52,6 +52,7 @@ public partial class Game1
     {
         _isColorPaletteOpen = false;
         _colorPaletteSwapSourceIndex = -1;
+        EnsureImeClosedForShortcutInput();
         _status = status;
     }
 
