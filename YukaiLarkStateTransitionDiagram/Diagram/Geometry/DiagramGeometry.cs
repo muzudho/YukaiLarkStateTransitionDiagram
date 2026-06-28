@@ -47,8 +47,7 @@ public partial class Game1
             case TransitionHandleKind.Waypoint:
                 if (waypointIndex >= 0 && waypointIndex < transition.Waypoints.Count)
                 {
-                    transition.Waypoints[waypointIndex] = mousePosition;
-                    UpdateTransitionWaypointEndpointAngles(transition);
+                    MoveTransitionWaypoint(transition, waypointIndex, mousePosition);
                 }
                 break;
             case TransitionHandleKind.SegmentControlPoint1:
@@ -60,8 +59,42 @@ public partial class Game1
         }
     }
 
+    private void MoveTransitionWaypoint(DiagramTransition transition, int waypointIndex, Vector2 position)
+    {
+        var previousPosition = transition.Waypoints[waypointIndex];
+        var delta = position - previousPosition;
+        if (delta.LengthSquared() <= 0.0001f)
+        {
+            return;
+        }
 
+        transition.Waypoints[waypointIndex] = position;
+        MoveTransitionWaypointControlPoints(transition, waypointIndex, delta);
+        UpdateTransitionWaypointEndpointAngles(transition);
+    }
 
+    private static void MoveTransitionWaypointControlPoints(DiagramTransition transition, int waypointIndex, Vector2 delta)
+    {
+        var previousSegmentIndex = waypointIndex;
+        if (previousSegmentIndex >= 0 && previousSegmentIndex < transition.SegmentControls.Count)
+        {
+            var controls = transition.SegmentControls[previousSegmentIndex];
+            if (controls.ControlPoint2.HasValue)
+            {
+                controls.ControlPoint2 += delta;
+            }
+        }
+
+        var nextSegmentIndex = waypointIndex + 1;
+        if (nextSegmentIndex >= 0 && nextSegmentIndex < transition.SegmentControls.Count)
+        {
+            var controls = transition.SegmentControls[nextSegmentIndex];
+            if (controls.ControlPoint1.HasValue)
+            {
+                controls.ControlPoint1 += delta;
+            }
+        }
+    }
 
     private Vector2 GetConstrainedEndpointControlPoint(DiagramTransition transition, bool isSourceControlPoint, Vector2 mousePosition)
     {
