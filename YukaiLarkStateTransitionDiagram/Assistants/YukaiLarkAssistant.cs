@@ -23,6 +23,8 @@ internal sealed class YukaiLarkAssistant
 
     public Rectangle MascotBounds { get; private set; }
     public Rectangle CutInBandBounds { get; private set; }
+    public Rectangle AssistAcceptButtonBounds { get; private set; }
+    public Rectangle AssistDeclineButtonBounds { get; private set; }
 
     private bool IsAssistReady => _assistSeconds >= AssistWakeSeconds;
     private bool IsAssistGhostReady => _assistSeconds >= AssistWakeSeconds + AssistGhostDelaySeconds;
@@ -86,8 +88,8 @@ internal sealed class YukaiLarkAssistant
     public bool ShouldSuppressFromKeyboard(YukaiLarkAssistantContext context, KeyboardState keyboard, KeyboardState previousKeyboard, out YukaiLarkAssistKind kind)
     {
         kind = GetRunnableAssistKind(context);
-        return kind == YukaiLarkAssistKind.CreateTransition
-            && context.IsNormalToEndTransitionSuggestion
+        return (kind == YukaiLarkAssistKind.CreateTransition && context.IsNormalToEndTransitionSuggestion
+                || kind == YukaiLarkAssistKind.EditStateNodeLabel)
             && keyboard.IsKeyDown(Keys.Escape)
             && !previousKeyboard.IsKeyDown(Keys.Escape);
     }
@@ -95,7 +97,15 @@ internal sealed class YukaiLarkAssistant
     public bool ShouldRunFromMouse(YukaiLarkAssistantContext context, Point mousePosition, out YukaiLarkAssistKind kind)
     {
         kind = GetRunnableAssistKind(context);
-        return kind != YukaiLarkAssistKind.None && MascotBounds.Contains(mousePosition);
+        return kind != YukaiLarkAssistKind.None
+            && (MascotBounds.Contains(mousePosition) || AssistAcceptButtonBounds.Contains(mousePosition));
+    }
+
+    public bool ShouldSuppressFromMouse(YukaiLarkAssistantContext context, Point mousePosition, out YukaiLarkAssistKind kind)
+    {
+        kind = GetRunnableAssistKind(context);
+        return kind == YukaiLarkAssistKind.EditStateNodeLabel
+            && AssistDeclineButtonBounds.Contains(mousePosition);
     }
 
     public Vector2 GetNodeScreenPosition(Viewport viewport, YukaiLarkAssistKind kind)
@@ -168,6 +178,8 @@ internal sealed class YukaiLarkAssistant
     {
         MascotBounds = Rectangle.Empty;
         CutInBandBounds = Rectangle.Empty;
+        AssistAcceptButtonBounds = Rectangle.Empty;
+        AssistDeclineButtonBounds = Rectangle.Empty;
         if (viewport.Width < 640 || viewport.Height < 420)
         {
             return;
@@ -361,7 +373,7 @@ internal sealed class YukaiLarkAssistant
         spriteBatch.Draw(pixel, bubble, theme.AssistantBubbleColor);
         drawRectangleOutline(bubble, theme.AssistantBubbleBorderColor, 2);
         drawUiText(title, new Vector2(bubble.X + 12, bubble.Y + 13), theme.AssistantTitleTextColor, 17, true);
-        DrawAssistantCutIn(spriteBatch, pixel, viewport, mascotBounds, body, string.Empty, theme, drawRectangleOutline, drawUiText);
+        DrawAssistantCutIn(spriteBatch, pixel, viewport, mascotBounds, body, string.Empty, kind, theme, drawRectangleOutline, drawUiText);
     }
 
     private static (string Title, string Body) GetBubbleText(YukaiLarkAssistKind kind, YukaiLarkAssistantContext context)
@@ -369,7 +381,7 @@ internal sealed class YukaiLarkAssistant
         {
             YukaiLarkAssistKind.CreateStartMarker => ("わたしの名前はユカイラークです", "開始マークを作る？ Enter または鳥をクリック"),
             YukaiLarkAssistKind.CreateStateNode => ("次の状態を作る？", "Enter または鳥をクリック"),
-            YukaiLarkAssistKind.EditStateNodeLabel => ("ノードのラベルを編集する？", $"{context.DefaultStateNodeLabelSummary} の名前を入力できます"),
+            YukaiLarkAssistKind.EditStateNodeLabel => ("ノードのラベルを編集する？", $"{context.DefaultStateNodeLabelSummary} / Enter: ラベルを入力する / Esc: しない"),
             YukaiLarkAssistKind.CreateSecondStateNode => ("2つ目の状態を作る？", "作らないときは数秒待つと次へ進みます"),
             YukaiLarkAssistKind.CreateTransition => GetTransitionBubbleText(context),
             YukaiLarkAssistKind.AddTransitionEvent => ("イベントを追加する？", $"{context.MissingTransitionEventSummary} 間の遷移"),
@@ -411,7 +423,7 @@ internal sealed class YukaiLarkAssistant
         spriteBatch.Draw(pixel, bubble, theme.AssistantBubbleColor);
         drawRectangleOutline(bubble, theme.AssistantCompletedBubbleBorderColor, 2);
         drawUiText(title, new Vector2(bubble.X + 12, bubble.Y + 13), theme.AssistantTitleTextColor, 17, true);
-        DrawAssistantCutIn(spriteBatch, pixel, viewport, mascotBounds, action, hint, theme, drawRectangleOutline, drawUiText);
+        DrawAssistantCutIn(spriteBatch, pixel, viewport, mascotBounds, action, hint, YukaiLarkAssistKind.None, theme, drawRectangleOutline, drawUiText);
     }
 
     private void DrawAssistantCutIn(
@@ -421,6 +433,7 @@ internal sealed class YukaiLarkAssistant
         Rectangle mascotBounds,
         string primaryText,
         string secondaryText,
+        YukaiLarkAssistKind kind,
         BoardTheme theme,
         DrawRectangleOutline drawRectangleOutline,
         DrawUiText drawUiText)
@@ -431,7 +444,8 @@ internal sealed class YukaiLarkAssistant
         }
 
         var hasSecondaryText = !string.IsNullOrWhiteSpace(secondaryText);
-        var bandHeight = hasSecondaryText ? 76 : 56;
+        var hasActionButtons = kind == YukaiLarkAssistKind.EditStateNodeLabel;
+        var bandHeight = hasActionButtons ? 86 : hasSecondaryText ? 76 : 56;
         var preferredY = Math.Max(mascotBounds.Bottom + 16, (int)(viewport.Height * 0.72f));
         var y = Math.Clamp(preferredY, 86, viewport.Height - bandHeight - 72);
         var band = new Rectangle(0, y, viewport.Width, bandHeight);
@@ -454,8 +468,57 @@ internal sealed class YukaiLarkAssistant
         {
             drawUiText(secondaryText, new Vector2(frame.X + 18, frame.Y + 34), theme.AssistantCutInSecondaryTextColor, 14, false);
         }
+        if (hasActionButtons)
+        {
+            DrawAssistantActionButtons(spriteBatch, pixel, frame, theme, drawRectangleOutline, drawUiText);
+        }
     }
 
+    private void DrawAssistantActionButtons(
+        SpriteBatch spriteBatch,
+        Texture2D pixel,
+        Rectangle frame,
+        BoardTheme theme,
+        DrawRectangleOutline drawRectangleOutline,
+        DrawUiText drawUiText)
+    {
+        const int gap = 10;
+        const int acceptWidth = 184;
+        const int declineWidth = 112;
+        const int height = 26;
+        var y = frame.Y + 38;
+        var x = frame.X + 18;
+        AssistAcceptButtonBounds = new Rectangle(x, y, acceptWidth, height);
+        AssistDeclineButtonBounds = new Rectangle(x + acceptWidth + gap, y, declineWidth, height);
+
+        DrawAssistantActionButton(spriteBatch, pixel, AssistAcceptButtonBounds, "Enter  ラベルを入力", true, theme, drawRectangleOutline, drawUiText);
+        DrawAssistantActionButton(spriteBatch, pixel, AssistDeclineButtonBounds, "Esc  しない", false, theme, drawRectangleOutline, drawUiText);
+    }
+
+    private static void DrawAssistantActionButton(
+        SpriteBatch spriteBatch,
+        Texture2D pixel,
+        Rectangle bounds,
+        string label,
+        bool primary,
+        BoardTheme theme,
+        DrawRectangleOutline drawRectangleOutline,
+        DrawUiText drawUiText)
+    {
+        var fill = primary
+            ? theme.AssistantBubbleBorderColor * 0.56f
+            : theme.AssistantCutInFrameColor * 0.82f;
+        var border = primary
+            ? theme.AssistantCompletedBubbleBorderColor
+            : theme.AssistantBubbleBorderColor * 0.72f;
+        var text = primary
+            ? theme.AssistantCutInPrimaryTextColor
+            : theme.AssistantCutInSecondaryTextColor;
+
+        spriteBatch.Draw(pixel, bounds, fill);
+        drawRectangleOutline(bounds, border, 1);
+        drawUiText(label, new Vector2(bounds.X + 10, bounds.Y + 4), text, 13, primary);
+    }
     private static (string Title, string Action, string Hint) GetCompletedBubbleText(YukaiLarkAssistKind kind)
         => kind switch
         {

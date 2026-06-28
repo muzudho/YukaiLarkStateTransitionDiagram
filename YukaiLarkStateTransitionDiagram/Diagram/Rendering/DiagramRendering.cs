@@ -334,7 +334,7 @@ public partial class Game1
         }
 
         var node = _nodes
-            .Where(IsDefaultLabeledNormalNode)
+            .Where(node => IsDefaultLabeledNormalNode(node) && !_skippedStateNodeLabelEditAssistNodeIds.Contains(node.Id))
             .OrderBy(n => n.Id)
             .FirstOrDefault();
         if (node is null)

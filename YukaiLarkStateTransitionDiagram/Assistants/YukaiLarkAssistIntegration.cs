@@ -1,6 +1,7 @@
 namespace YukaiLarkStateTransitionDiagram;
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using YukaiLarkStateTransitionDiagram.Assistants;
 using YukaiLarkStateTransitionDiagram.Navigation;
@@ -9,6 +10,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 public partial class Game1
 {
+    private readonly HashSet<int> _skippedStateNodeLabelEditAssistNodeIds = new();
     private YukaiLarkAssistantContext CreateAssistantContext()
     {
         var missingTransitionEventSummary = GetMissingTransitionEventSummary();
@@ -24,7 +26,9 @@ public partial class Game1
                 .OrderByDescending(node => (node.Position - startMarker.Position).LengthSquared())
                 .ThenBy(node => node.Id)
                 .FirstOrDefault();
-        var defaultLabeledNormalNode = normalNodes.FirstOrDefault(IsDefaultLabeledNormalNode);
+        var defaultLabeledNormalNode = normalNodes.FirstOrDefault(node =>
+            IsDefaultLabeledNormalNode(node)
+            && !_skippedStateNodeLabelEditAssistNodeIds.Contains(node.Id));
         var defaultStateNodeLabelSummary = defaultLabeledNormalNode?.Label ?? string.Empty;
         var hasStartToNormalTransition = startMarker is not null
             && normalNodes.Count >= 1
@@ -184,7 +188,8 @@ public partial class Game1
             ExecuteUndoableChange = ExecuteUndoableChange,
             InitializeTransitionEndpoints = InitializeTransitionEndpoints,
             GetNodeScreenPosition = _yukaiLarkAssistant.GetNodeScreenPosition,
-            ShiftDiagramLeftDistance = context.ShiftDiagramLeftDistance
+            ShiftDiagramLeftDistance = context.ShiftDiagramLeftDistance,
+            SkippedStateNodeLabelEditAssistNodeIds = _skippedStateNodeLabelEditAssistNodeIds
         });
 
         _nextNodeId = result.NextNodeId;
@@ -216,6 +221,12 @@ public partial class Game1
 
     private void SuppressYukaiLarkAssist(YukaiLarkAssistKind kind)
     {
+        if (kind == YukaiLarkAssistKind.EditStateNodeLabel)
+        {
+            SkipStateNodeLabelEditAssist();
+            return;
+        }
+
         if (kind != YukaiLarkAssistKind.CreateTransition
             || !TryGetNormalToEndTransitionSuggestion(out var source, out var target))
         {
@@ -238,6 +249,23 @@ public partial class Game1
 
         _yukaiLarkAssistant.Reset();
         _status = $"{GetNodeLabel(source.Id)} から終了マークへつなぐ提案を、この図では抑制しました。Ctrl+Sで保存できます。";
+    }
+
+    private void SkipStateNodeLabelEditAssist()
+    {
+        var node = _nodes
+            .Where(node => IsDefaultLabeledNormalNode(node) && !_skippedStateNodeLabelEditAssistNodeIds.Contains(node.Id))
+            .OrderBy(node => node.Id)
+            .FirstOrDefault();
+        if (node is null)
+        {
+            _status = "ラベル編集を提案できる通常ノードはありません。";
+            return;
+        }
+
+        _skippedStateNodeLabelEditAssistNodeIds.Add(node.Id);
+        _yukaiLarkAssistant.Reset();
+        _status = $"{node.Label} のラベル編集アシストを今回は見送ります。F2・Enterではいつでも編集できます。";
     }
     private bool TryGetUnreachedNormalTransitionEndpoints(out DiagramNode source, out DiagramNode target)
     {

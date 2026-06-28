@@ -20,6 +20,7 @@ internal sealed class YukaiLarkAssistOperation
     public required Action<DiagramTransition> InitializeTransitionEndpoints { get; init; }
     public required Func<Viewport, YukaiLarkAssistKind, Vector2> GetNodeScreenPosition { get; init; }
     public required float ShiftDiagramLeftDistance { get; init; }
+    public required IReadOnlySet<int> SkippedStateNodeLabelEditAssistNodeIds { get; init; }
 }
 
 internal readonly record struct YukaiLarkAssistOperationResult(
@@ -139,7 +140,7 @@ internal static class YukaiLarkAssistOperations
     private static YukaiLarkAssistOperationResult EditStateNodeLabel(YukaiLarkAssistOperation operation)
     {
         var node = operation.Nodes
-            .Where(IsDefaultLabeledNormalNode)
+            .Where(node => IsDefaultLabeledNormalNode(node) && !operation.SkippedStateNodeLabelEditAssistNodeIds.Contains(node.Id))
             .OrderBy(n => n.Id)
             .FirstOrDefault();
         if (node is null)

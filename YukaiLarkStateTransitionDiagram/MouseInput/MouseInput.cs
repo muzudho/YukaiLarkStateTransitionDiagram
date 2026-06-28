@@ -90,6 +90,12 @@ public partial class Game1
                 return;
             }
 
+            if (_yukaiLarkAssistant.ShouldSuppressFromMouse(CreateAssistantContext(), mouse.Position, out var suppressedAssistKind))
+            {
+                SuppressYukaiLarkAssist(suppressedAssistKind);
+                return;
+            }
+
             if (_yukaiLarkAssistant.ShouldRunFromMouse(CreateAssistantContext(), mouse.Position, out var assistKind))
             {
                 RunYukaiLarkAssist(assistKind);
