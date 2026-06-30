@@ -78,7 +78,8 @@ public sealed class NodeRenderer
         // 通常ノード
         if (node.Kind == NodeKind.Normal)
         {
-            DrawNodeOutlineCircle(node.Position, node.Radius, normalOutlineColor, 3f, drawHoveredOutline, totalGameTime, hoverThickness: 4.5f);
+            var normalOutlineRadius = hovered && !inactive ? node.Radius - 1f : node.Radius;
+            DrawNodeOutlineCircle(node.Position, normalOutlineRadius, normalOutlineColor, 3f, drawHoveredOutline, totalGameTime, hoverThickness: 4.5f);
         }
         // 開始マーク
         else if (node.Kind == NodeKind.StartMarker)
