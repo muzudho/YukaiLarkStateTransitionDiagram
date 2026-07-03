@@ -62,16 +62,25 @@ public sealed class NodeRenderer
             DrawSelectedNodeGlow(node, totalGameTime);
         }
 
+        var isSubstateNode = node.Kind == NodeKind.Normal && node.SubstateDiagramId.HasValue;
         var hideBaseOuterRing = node.Kind == NodeKind.Normal && hovered && !inactive;
-        if (!hideBaseOuterRing)
+        var drawBaseOuterRing = !hideBaseOuterRing && !isSubstateNode;
+        if (drawBaseOuterRing)
         {
             _primitiveRenderer.DrawCircle(node.Position, node.Radius + 4, outerColor);
         }
 
-        _primitiveRenderer.DrawCircle(node.Position, node.Radius, fill);
+        var substateRingRadius = isSubstateNode
+            ? MathF.Max(6f, node.Radius - 8f)
+            : 0f;
+        var fillRadius = isSubstateNode
+            ? MathF.Max(4f, substateRingRadius + 1f)
+            : node.Radius;
+
+        _primitiveRenderer.DrawCircle(node.Position, fillRadius, fill);
         if (selected && !inactive)
         {
-            DrawSelectedNodeSweep(node, totalGameTime);
+            DrawSelectedNodeSweep(node, totalGameTime, fillRadius);
         }
 
         var drawHoveredOutline = hovered && !inactive;
@@ -80,12 +89,11 @@ public sealed class NodeRenderer
         {
             var normalOutlineRadius = hovered && !inactive ? node.Radius - 1f : node.Radius;
             DrawNodeOutlineCircle(node.Position, normalOutlineRadius, normalOutlineColor, 3f, drawHoveredOutline, totalGameTime, hoverThickness: 4.5f);
-            if (node.SubstateDiagramId.HasValue)
+            if (isSubstateNode)
             {
                 var substateRingColor = selected && !inactive
                     ? Theme.SelectedNodeOuterRingColor
                     : Blend(normalOutlineColor, GetNormalNodeFillColor(node), 0.35f);
-                var substateRingRadius = MathF.Max(6f, node.Radius - 8f);
                 DrawNodeOutlineCircle(node.Position, substateRingRadius, substateRingColor, 2f, false, totalGameTime);
             }
         }
@@ -238,13 +246,13 @@ public sealed class NodeRenderer
         _primitiveRenderer.DrawCircle(node.Position, node.Radius + 6f, Theme.NodeSelectedInnerGlowColor * MathHelper.Lerp(0.18f, 0.28f, pulse));
     }
 
-    private void DrawSelectedNodeSweep(DiagramNode node, TimeSpan totalGameTime)
+    private void DrawSelectedNodeSweep(DiagramNode node, TimeSpan totalGameTime, float radius)
     {
         var progress = (float)(totalGameTime.TotalSeconds * 0.58 % 1.0);
-        var sweepCenter = MathHelper.Lerp(-node.Radius, node.Radius, progress);
-        var sweepHalfHeight = MathF.Max(18f, node.Radius * 0.48f);
+        var sweepCenter = MathHelper.Lerp(-radius, radius, progress);
+        var sweepHalfHeight = MathF.Max(18f, radius * 0.48f);
 
-        for (var y = -node.Radius; y <= node.Radius; y++)
+        for (var y = -radius; y <= radius; y++)
         {
             var distance = MathF.Abs(y - sweepCenter);
             if (distance > sweepHalfHeight)
@@ -252,7 +260,7 @@ public sealed class NodeRenderer
                 continue;
             }
 
-            var halfWidth = (float)Math.Sqrt(node.Radius * node.Radius - y * y);
+            var halfWidth = (float)Math.Sqrt(radius * radius - y * y);
             var strength = 1f - (distance / sweepHalfHeight);
             var alpha = 0.05f + (strength * 0.22f);
             var rectangle = new Rectangle(
