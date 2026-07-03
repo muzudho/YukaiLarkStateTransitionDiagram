@@ -264,6 +264,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
 
             if (selectedNode.Kind == NodeKind.Normal)
             {
+                nodeHints.Add(new HelpHint("Ctrl+Enter", "中へ入る"));
                 nodeHints.Add(new HelpHint("C", "色パレット"));
             }
 

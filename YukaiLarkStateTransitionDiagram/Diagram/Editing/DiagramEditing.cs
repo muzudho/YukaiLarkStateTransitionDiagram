@@ -144,6 +144,7 @@ public partial class Game1
             ExecuteUndoableChange(() =>
             {
                 var id = node.Id;
+                RemoveSubstateDiagramTree(node.SubstateDiagramId);
                 _nodes.Remove(node);
                 _transitions.RemoveAll(t => t.SourceId == id || t.TargetId == id);
             });

@@ -203,7 +203,8 @@ public partial class Game1
             Position = node.Position,
             RadiusUnits = node.RadiusUnits,
             ColorIndex = node.ColorIndex,
-            Kind = node.Kind
+            Kind = node.Kind,
+            SubstateDiagramId = node.SubstateDiagramId
         };
 
     private static DiagramTransition CloneDiagramTransition(DiagramTransition transition)

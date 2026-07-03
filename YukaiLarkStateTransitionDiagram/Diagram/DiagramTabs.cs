@@ -1,6 +1,8 @@
 namespace YukaiLarkStateTransitionDiagram;
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using YukaiLarkStateTransitionDiagram.Navigation;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -36,9 +38,16 @@ public partial class Game1
         }
 
         var deletedName = CurrentDiagram.Name;
+        var deletedId = CurrentDiagram.Id;
         ExecuteUndoableChange(() =>
         {
-            _diagrams.RemoveAt(_currentDiagramIndex);
+            var deletedIds = CollectSubstateDiagramTreeIds(deletedId);
+            _diagrams.RemoveAll(diagram => deletedIds.Contains(diagram.Id));
+            ClearSubstateReferencesTo(deletedIds);
+            if (_diagrams.Count == 0)
+            {
+                _diagrams.Add(DiagramInstance.CreateDefault());
+            }
             _currentDiagramIndex = Math.Clamp(_currentDiagramIndex, 0, _diagrams.Count - 1);
             CurrentDiagram.RefreshNextNodeId();
         });
@@ -135,6 +144,116 @@ public partial class Game1
         }
 
         return true;
+    }
+
+    private void EnterSelectedNodeSubstate()
+    {
+        if (_selectedNode is null)
+        {
+            _status = "中へ入る状態を選択してください。";
+            return;
+        }
+
+        if (_selectedNode.Kind != NodeKind.Normal)
+        {
+            _status = "サブステートを持てるのは通常ノードだけです。";
+            return;
+        }
+
+        var parentNode = _selectedNode;
+        if (parentNode.SubstateDiagramId is { } existingDiagramId)
+        {
+            var existingIndex = _diagrams.FindIndex(diagram => diagram.Id == existingDiagramId);
+            if (existingIndex >= 0)
+            {
+                SelectDiagramTab(existingIndex);
+                _status = $"{parentNode.Label} のサブステートへ入りました。";
+                return;
+            }
+        }
+
+        ExecuteUndoableChange(() =>
+        {
+            var id = GetNextDiagramId();
+            var diagram = DiagramInstance.CreateNew(id);
+            diagram.Name = GetSubstateDiagramName(parentNode);
+            _diagrams.Add(diagram);
+            parentNode.SubstateDiagramId = id;
+            _currentDiagramIndex = _diagrams.Count - 1;
+            AddInitialMarkers();
+        });
+
+        ResetTransientDiagramInteractionState();
+        _status = $"{parentNode.Label} のサブステートを作成して入りました。Ctrl+Tabで親の図へ戻れます。";
+    }
+
+    private static string GetSubstateDiagramName(DiagramNode parentNode)
+    {
+        var label = string.IsNullOrWhiteSpace(parentNode.Label) ? $"状態{parentNode.Id}" : parentNode.Label.Trim();
+        return label.Length > 16 ? $"{label[..16]}…" : $"{label}の中";
+    }
+
+    private void RemoveSubstateDiagramTree(int? rootDiagramId)
+    {
+        if (rootDiagramId is not { } id)
+        {
+            return;
+        }
+
+        var removeIds = CollectSubstateDiagramTreeIds(id);
+        if (removeIds.Count == 0)
+        {
+            return;
+        }
+
+        _diagrams.RemoveAll(diagram => removeIds.Contains(diagram.Id));
+        ClearSubstateReferencesTo(removeIds);
+        if (_diagrams.Count == 0)
+        {
+            _diagrams.Add(DiagramInstance.CreateDefault());
+        }
+
+        _currentDiagramIndex = Math.Clamp(_currentDiagramIndex, 0, _diagrams.Count - 1);
+    }
+
+    private HashSet<int> CollectSubstateDiagramTreeIds(int rootDiagramId)
+    {
+        var diagramById = _diagrams.ToDictionary(diagram => diagram.Id);
+        var removeIds = new HashSet<int>();
+        var pending = new Stack<int>();
+        pending.Push(rootDiagramId);
+
+        while (pending.Count > 0)
+        {
+            var id = pending.Pop();
+            if (!removeIds.Add(id) || !diagramById.TryGetValue(id, out var diagram))
+            {
+                continue;
+            }
+
+            foreach (var childId in diagram.Nodes
+                .Where(node => node.Kind == NodeKind.Normal && node.SubstateDiagramId.HasValue)
+                .Select(node => node.SubstateDiagramId!.Value))
+            {
+                pending.Push(childId);
+            }
+        }
+
+        return removeIds;
+    }
+
+    private void ClearSubstateReferencesTo(HashSet<int> removedDiagramIds)
+    {
+        foreach (var diagram in _diagrams)
+        {
+            foreach (var node in diagram.Nodes)
+            {
+                if (node.SubstateDiagramId is { } id && removedDiagramIds.Contains(id))
+                {
+                    node.SubstateDiagramId = null;
+                }
+            }
+        }
     }
 
     private int GetNextDiagramId()

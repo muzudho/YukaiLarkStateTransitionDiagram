@@ -577,6 +577,20 @@ public sealed class DiagramDocument
             Diagrams[index].RefreshNextNodeId();
         }
 
+        var diagramIds = Diagrams.Select(diagram => diagram.Id).ToHashSet();
+        foreach (var diagram in Diagrams)
+        {
+            foreach (var node in diagram.Nodes)
+            {
+                if (node.Kind != NodeKind.Normal
+                    || node.SubstateDiagramId == diagram.Id
+                    || (node.SubstateDiagramId is { } substateDiagramId && !diagramIds.Contains(substateDiagramId)))
+                {
+                    node.SubstateDiagramId = null;
+                }
+            }
+        }
+
         if (!Diagrams.Any(diagram => diagram.Id == ActiveDiagramId))
         {
             ActiveDiagramId = Diagrams[0].Id;
@@ -630,6 +644,7 @@ public sealed class DiagramNode
     public float Radius => RadiusUnits * RadiusUnit;
     public int ColorIndex { get; set; }
     public NodeKind Kind { get; set; }
+    public int? SubstateDiagramId { get; set; }
 }
 public enum NodeKind
 {

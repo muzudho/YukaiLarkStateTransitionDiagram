@@ -80,6 +80,14 @@ public sealed class NodeRenderer
         {
             var normalOutlineRadius = hovered && !inactive ? node.Radius - 1f : node.Radius;
             DrawNodeOutlineCircle(node.Position, normalOutlineRadius, normalOutlineColor, 3f, drawHoveredOutline, totalGameTime, hoverThickness: 4.5f);
+            if (node.SubstateDiagramId.HasValue)
+            {
+                var substateRingColor = selected && !inactive
+                    ? Theme.SelectedNodeOuterRingColor
+                    : Blend(normalOutlineColor, GetNormalNodeFillColor(node), 0.35f);
+                var substateRingRadius = MathF.Max(6f, node.Radius - 8f);
+                DrawNodeOutlineCircle(node.Position, substateRingRadius, substateRingColor, 2f, false, totalGameTime);
+            }
         }
         // 開始マーク
         else if (node.Kind == NodeKind.StartMarker)
