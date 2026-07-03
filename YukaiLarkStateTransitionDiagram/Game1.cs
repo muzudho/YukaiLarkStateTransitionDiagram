@@ -27,9 +27,7 @@ public partial class Game1 : Game
     private const string YukaiLarkMascotLightThemeTexturePath = "Assets/BrandLogo/yukai-lark-logo-light-theme.png";
     private const string YukaiLarkMascotDarkThemeTexturePath = "Assets/BrandLogo/yukai-lark-logo-dark-theme.png";
     private readonly GraphicsDeviceManager _graphics;
-    private readonly List<DiagramNode> _nodes = new();
-    private readonly List<DiagramTransition> _transitions = new();
-    private readonly AssistSuppressionSection _assistSuppression = new();
+    private readonly List<DiagramInstance> _diagrams = new() { DiagramInstance.CreateDefault() };
     private readonly Dictionary<string, Texture2D> _labelTextureCache = new();
     private readonly Dictionary<string, Texture2D> _uiTextTextureCache = new();
     private PrimitiveRenderer _primitiveRenderer = null!;
@@ -59,10 +57,20 @@ public partial class Game1 : Game
     private float _cameraZoom = 1f;
     private bool _isEditingFileName;
     private bool _isImeEnabledForTextInput = true;
-    private int _nextNodeId = 1;
+    private int _currentDiagramIndex;
     private string _status = DefaultStatus;
     private string _fileNameEditWarning = string.Empty;
     private const string DefaultStatus = "N: 状態追加 / S: 開始マーク / ホイール: 拡大縮小 / T: テーマ選択 / Shift+ドラッグ: 遷移作成 / F2・Enter: ラベル編集 / Ctrl+Z/Y: 元に戻す/やり直し / Ctrl+S: 保存";
+    private DiagramInstance CurrentDiagram => _diagrams[_currentDiagramIndex];
+    private List<DiagramNode> _nodes => CurrentDiagram.Nodes;
+    private List<DiagramTransition> _transitions => CurrentDiagram.Transitions;
+    private AssistSuppressionSection _assistSuppression => CurrentDiagram.AssistSuppression;
+    private int _nextNodeId
+    {
+        get => CurrentDiagram.NextNodeId;
+        set => CurrentDiagram.NextNodeId = Math.Max(1, value);
+    }
+
     public Game1()
     {
         _graphics = new GraphicsDeviceManager(this)
@@ -493,24 +501,72 @@ public partial class Game1 : Game
 }
 public sealed class DiagramDocument
 {
-    public const int CurrentFormatVersion = 2;
+    public const int CurrentFormatVersion = 3;
 
     public int FormatVersion { get; set; } = CurrentFormatVersion;
+    public int ActiveDiagramId { get; set; } = 1;
+    public List<DiagramInstance> Diagrams { get; set; } = new();
     public DiagramDataSection Data { get; set; } = new();
     public AssistSuppressionSection AssistSuppression { get; set; } = new();
 
     [JsonIgnore]
+    public DiagramInstance ActiveDiagram
+    {
+        get
+        {
+            EnsureDiagrams();
+            return Diagrams.FirstOrDefault(diagram => diagram.Id == ActiveDiagramId) ?? Diagrams[0];
+        }
+    }
+
+    [JsonIgnore]
     public List<DiagramNode> Nodes
     {
-        get => Data.Nodes;
-        set => Data.Nodes = value ?? new List<DiagramNode>();
+        get => ActiveDiagram.Nodes;
+        set => ActiveDiagram.Nodes = value ?? new List<DiagramNode>();
     }
 
     [JsonIgnore]
     public List<DiagramTransition> Transitions
     {
-        get => Data.Transitions;
-        set => Data.Transitions = value ?? new List<DiagramTransition>();
+        get => ActiveDiagram.Transitions;
+        set => ActiveDiagram.Transitions = value ?? new List<DiagramTransition>();
+    }
+
+    public void EnsureDiagrams()
+    {
+        if (Diagrams.Count == 0)
+        {
+            Diagrams.Add(new DiagramInstance
+            {
+                Id = ActiveDiagramId <= 0 ? 1 : ActiveDiagramId,
+                Name = "ダイアグラム1",
+                Data = Data,
+                AssistSuppression = AssistSuppression
+            });
+        }
+
+        for (var index = 0; index < Diagrams.Count; index++)
+        {
+            if (Diagrams[index].Id <= 0)
+            {
+                Diagrams[index].Id = index + 1;
+            }
+            if (string.IsNullOrWhiteSpace(Diagrams[index].Name))
+            {
+                Diagrams[index].Name = $"ダイアグラム{index + 1}";
+            }
+            Diagrams[index].RefreshNextNodeId();
+        }
+
+        if (!Diagrams.Any(diagram => diagram.Id == ActiveDiagramId))
+        {
+            ActiveDiagramId = Diagrams[0].Id;
+        }
+
+        var activeDiagram = Diagrams.FirstOrDefault(diagram => diagram.Id == ActiveDiagramId) ?? Diagrams[0];
+        Data = activeDiagram.Data;
+        AssistSuppression = activeDiagram.AssistSuppression;
     }
 }
 

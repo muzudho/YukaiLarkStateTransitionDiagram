@@ -106,27 +106,32 @@ public partial class Game1
     }
 
     private DiagramDocument CaptureDiagramDocument()
-        => CloneDiagramDocument(new DiagramDocument
+    {
+        CurrentDiagram.RefreshNextNodeId();
+        return CloneDiagramDocument(new DiagramDocument
         {
-            Data = new DiagramDataSection { Nodes = _nodes, Transitions = _transitions },
-            AssistSuppression = _assistSuppression
+            ActiveDiagramId = CurrentDiagram.Id,
+            Diagrams = _diagrams.Select(CloneDiagramInstance).ToList(),
+            Data = CurrentDiagram.Data,
+            AssistSuppression = CurrentDiagram.AssistSuppression
         });
+    }
 
     private void ApplyDiagramDocument(DiagramDocument document)
     {
         var snapshot = CloneDiagramDocument(document);
-        _nodes.Clear();
-        _transitions.Clear();
-        _assistSuppression.SuppressedSuggestions.Clear();
-        _nodes.AddRange(snapshot.Nodes);
-        _transitions.AddRange(snapshot.Transitions);
-        _assistSuppression.SuppressedSuggestions.AddRange(snapshot.AssistSuppression.SuppressedSuggestions);
-        foreach (var transition in _transitions)
+        snapshot.EnsureDiagrams();
+        _diagrams.Clear();
+        _diagrams.AddRange(snapshot.Diagrams.Select(CloneDiagramInstance));
+        _currentDiagramIndex = Math.Max(0, _diagrams.FindIndex(diagram => diagram.Id == snapshot.ActiveDiagramId));
+        CurrentDiagram.RefreshNextNodeId();
+        foreach (var diagram in _diagrams)
         {
-            InitializeTransitionEndpoints(transition);
+            foreach (var transition in diagram.Transitions)
+            {
+                InitializeTransitionEndpoints(transition);
+            }
         }
-
-        _nextNodeId = _nodes.Count == 0 ? 1 : _nodes.Max(n => n.Id) + 1;
         if (_isEditingFileName || IsEditingLabel)
         {
             EndTextInputIme();
@@ -156,19 +161,38 @@ public partial class Game1
     }
 
     private static DiagramDocument CloneDiagramDocument(DiagramDocument document)
-        => new()
+    {
+        document.EnsureDiagrams();
+        var clone = new DiagramDocument
         {
             FormatVersion = document.FormatVersion,
+            ActiveDiagramId = document.ActiveDiagramId,
+            Diagrams = document.Diagrams.Select(CloneDiagramInstance).ToList()
+        };
+        clone.EnsureDiagrams();
+        return clone;
+    }
+
+    private static DiagramInstance CloneDiagramInstance(DiagramInstance diagram)
+    {
+        var clone = new DiagramInstance
+        {
+            Id = diagram.Id,
+            Name = diagram.Name,
             Data = new DiagramDataSection
             {
-                Nodes = document.Nodes.Select(CloneDiagramNode).ToList(),
-                Transitions = document.Transitions.Select(CloneDiagramTransition).ToList()
+                Nodes = diagram.Nodes.Select(CloneDiagramNode).ToList(),
+                Transitions = diagram.Transitions.Select(CloneDiagramTransition).ToList()
             },
             AssistSuppression = new AssistSuppressionSection
             {
-                SuppressedSuggestions = document.AssistSuppression.SuppressedSuggestions.Select(CloneAssistSuggestionSuppression).ToList()
-            }
+                SuppressedSuggestions = diagram.AssistSuppression.SuppressedSuggestions.Select(CloneAssistSuggestionSuppression).ToList()
+            },
+            NextNodeId = diagram.NextNodeId
         };
+        clone.RefreshNextNodeId();
+        return clone;
+    }
 
     private static DiagramNode CloneDiagramNode(DiagramNode node)
         => new()

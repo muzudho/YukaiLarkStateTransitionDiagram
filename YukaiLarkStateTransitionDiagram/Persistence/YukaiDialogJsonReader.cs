@@ -17,23 +17,32 @@ public static class YukaiDialogJsonReader
             return null;
         }
 
-        if (root.ContainsKey(nameof(DiagramDocument.Data)))
+        if (root.ContainsKey(nameof(DiagramDocument.Data)) || root.ContainsKey(nameof(DiagramDocument.Diagrams)))
         {
-            return JsonSerializer.Deserialize<DiagramDocument>(json, YukaiDialogJsonSerializer.Options);
+            var document = JsonSerializer.Deserialize<DiagramDocument>(json, YukaiDialogJsonSerializer.Options);
+            document?.EnsureDiagrams();
+            return document;
         }
 
         var legacyDocument = JsonSerializer.Deserialize<LegacyDiagramDocument>(json, YukaiDialogJsonSerializer.Options);
         return legacyDocument is null
             ? null
-            : new DiagramDocument
+            : CreateDocumentFromLegacy(legacyDocument);
+    }
+
+    private static DiagramDocument CreateDocumentFromLegacy(LegacyDiagramDocument legacyDocument)
+    {
+        var document = new DiagramDocument
+        {
+            FormatVersion = legacyDocument.FormatVersion,
+            Data = new DiagramDataSection
             {
-                FormatVersion = legacyDocument.FormatVersion,
-                Data = new DiagramDataSection
-                {
-                    Nodes = legacyDocument.Nodes,
-                    Transitions = legacyDocument.Transitions
-                }
-            };
+                Nodes = legacyDocument.Nodes,
+                Transitions = legacyDocument.Transitions
+            }
+        };
+        document.EnsureDiagrams();
+        return document;
     }
 
     private sealed class LegacyDiagramDocument

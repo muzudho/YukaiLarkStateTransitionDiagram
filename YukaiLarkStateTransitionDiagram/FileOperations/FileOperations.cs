@@ -40,11 +40,7 @@ public partial class Game1
     }
     private void SaveDiagramToPath(string path)
     {
-        var document = new DiagramDocument
-        {
-            Data = new DiagramDataSection { Nodes = _nodes, Transitions = _transitions },
-            AssistSuppression = _assistSuppression
-        };
+        var document = CaptureDiagramDocument();
         YukaiDialogJsonWriter.Write(path, document);
         _currentFilePath = path;
         RememberDiagramFile(path);
@@ -87,19 +83,7 @@ public partial class Game1
             EndTextInputIme();
         }
 
-        _nodes.Clear();
-        _transitions.Clear();
-        _assistSuppression.SuppressedSuggestions.Clear();
-        _nodes.AddRange(document.Nodes);
-        _transitions.AddRange(document.Transitions);
-        _assistSuppression.SuppressedSuggestions.AddRange(document.AssistSuppression.SuppressedSuggestions);
-        foreach (var transition in _transitions)
-        {
-            InitializeTransitionEndpoints(transition);
-        }
-        _nextNodeId = _nodes.Count == 0 ? 1 : _nodes.Max(n => n.Id) + 1;
-        _selectedNode = null;
-        _selectedTransition = null;
+        ApplyDiagramDocument(document);
         _currentFilePath = path;
         ClearHistory();
         RememberDiagramFile(path);
@@ -160,10 +144,9 @@ public partial class Game1
             EndTextInputIme();
         }
 
-        _nodes.Clear();
-        _transitions.Clear();
-        _assistSuppression.SuppressedSuggestions.Clear();
-        _nextNodeId = 1;
+        _diagrams.Clear();
+        _diagrams.Add(DiagramInstance.CreateDefault());
+        _currentDiagramIndex = 0;
         _selectedNode = null;
         _selectedTransition = null;
         _draggedNode = null;
