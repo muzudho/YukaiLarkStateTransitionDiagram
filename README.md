@@ -30,7 +30,7 @@ Windows で使う場合は、リリースページの **Assets** から次のフ
 
 ## 開発日誌
 
-- [最新の月別開発日誌: 2026年6月](YukaiLarkStateTransitionDiagram/Docs/開発/開発日誌_2026-06.md) - 1か月分を1ファイルで読めます。
+- [最新の月別開発日誌: 2026年7月](YukaiLarkStateTransitionDiagram/Docs/開発/開発日誌_2026-07.md) - 1か月分を1ファイルで読めます。
 
 
 ## できること
@@ -82,7 +82,7 @@ Visual Studio から起動する場合は、`YukaiLarkStateTransitionDiagram.sln
 ## ドキュメント
 
 - [使い方説明書](YukaiLarkStateTransitionDiagram/Docs/使い方説明書.md)
-- [最新の月別開発日誌: 2026年6月](YukaiLarkStateTransitionDiagram/Docs/開発/開発日誌_2026-06.md)
+- [最新の月別開発日誌: 2026年7月](YukaiLarkStateTransitionDiagram/Docs/開発/開発日誌_2026-07.md)
 - [Docs README](YukaiLarkStateTransitionDiagram/Docs/README.md)
 
 ## ライセンス
