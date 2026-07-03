@@ -27,6 +27,67 @@ public partial class Game1
     private void SelectPreviousDiagramTab()
         => SelectDiagramTab((_currentDiagramIndex - 1 + _diagrams.Count) % _diagrams.Count);
 
+    private void DeleteCurrentDiagramTab()
+    {
+        if (_diagrams.Count <= 1)
+        {
+            _status = "最後のタブは削除できません。";
+            return;
+        }
+
+        var deletedName = CurrentDiagram.Name;
+        ExecuteUndoableChange(() =>
+        {
+            _diagrams.RemoveAt(_currentDiagramIndex);
+            _currentDiagramIndex = Math.Clamp(_currentDiagramIndex, 0, _diagrams.Count - 1);
+            CurrentDiagram.RefreshNextNodeId();
+        });
+
+        ResetTransientDiagramInteractionState();
+        _status = $"{deletedName} を削除しました。Ctrl+Zで元に戻せます。";
+    }
+
+    private void BeginDiagramTabNameEdit()
+    {
+        _isEditingDiagramTabName = true;
+        _editingNode = null;
+        _editingTransition = null;
+        _draggedNode = null;
+        _resizedNode = null;
+        _linkSource = null;
+        _isPanning = false;
+        _textBoxController.Begin(CurrentDiagram.Name);
+        BeginTextInputIme();
+        _status = "タブ名を編集中です。Enterで確定、Escでキャンセルします。";
+    }
+
+    private void CommitDiagramTabNameEdit()
+    {
+        var name = _textBoxController.Text.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = $"ダイアグラム{CurrentDiagram.Id}";
+        }
+
+        if (CurrentDiagram.Name != name)
+        {
+            ExecuteUndoableChange(() => CurrentDiagram.Name = name);
+        }
+
+        EndTextInputIme();
+        _isEditingDiagramTabName = false;
+        _textBoxController.Clear();
+        _status = $"タブ名を {CurrentDiagram.Name} に更新しました。Ctrl+Sで保存できます。";
+    }
+
+    private void CancelDiagramTabNameEdit()
+    {
+        EndTextInputIme();
+        _isEditingDiagramTabName = false;
+        _textBoxController.Clear();
+        _status = "タブ名編集をキャンセルしました。";
+    }
+
     private void SelectDiagramTab(int index)
     {
         if (index < 0 || index >= _diagrams.Count || index == _currentDiagramIndex)
@@ -57,6 +118,14 @@ public partial class Game1
 
         for (var i = 0; i < _diagrams.Count; i++)
         {
+            var closeBounds = DiagramTabRenderer.GetTabCloseBounds(viewport, _diagrams, i);
+            if (closeBounds != Rectangle.Empty && closeBounds.Contains(mouse.Position))
+            {
+                SelectDiagramTab(i);
+                DeleteCurrentDiagramTab();
+                return true;
+            }
+
             var bounds = DiagramTabRenderer.GetTabBounds(viewport, _diagrams, i);
             if (bounds != Rectangle.Empty && bounds.Contains(mouse.Position))
             {
@@ -81,10 +150,12 @@ public partial class Game1
 
     private void ResetTransientDiagramInteractionState()
     {
-        if (_isEditingFileName || IsEditingLabel)
+        if (_isEditingFileName || _isEditingDiagramTabName || IsEditingLabel)
         {
             EndTextInputIme();
         }
+
+        _isEditingDiagramTabName = false;
 
         _selectedNode = null;
         _selectedTransition = null;

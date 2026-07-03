@@ -67,6 +67,7 @@ public partial class Game1
             shiftDiagramLeftDistance,
             hasUnreachedNormalNode,
             !IsEditingLabel
+                && !_isEditingDiagramTabName
                 && !_isEditingFileName
                 && !_isExportSelecting
                 && !_isPanning

@@ -78,7 +78,7 @@ public partial class Game1
             _status = "状態遷移図を読み込めませんでした。";
             return;
         }
-        if (_isEditingFileName || IsEditingLabel)
+        if (_isEditingFileName || _isEditingDiagramTabName || IsEditingLabel)
         {
             EndTextInputIme();
         }
@@ -139,7 +139,7 @@ public partial class Game1
     /// </summary>
     private void ClearDiagram()
     {
-        if (_isEditingFileName || IsEditingLabel)
+        if (_isEditingFileName || _isEditingDiagramTabName || IsEditingLabel)
         {
             EndTextInputIme();
         }

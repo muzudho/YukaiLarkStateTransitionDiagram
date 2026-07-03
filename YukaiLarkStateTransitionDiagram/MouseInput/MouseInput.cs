@@ -627,7 +627,7 @@ public partial class Game1
             return MouseCursor.SizeAll;
         }
 
-        if (_isFileMenuOpen || _isThemeMenuOpen || _isColorPaletteOpen || _isExportSelecting || IsEditingLabel || _isEditingFileName)
+        if (_isFileMenuOpen || _isThemeMenuOpen || _isColorPaletteOpen || _isExportSelecting || IsEditingLabel || _isEditingDiagramTabName || _isEditingFileName)
         {
             return MouseCursor.Arrow;
         }

@@ -132,7 +132,7 @@ public partial class Game1
                 InitializeTransitionEndpoints(transition);
             }
         }
-        if (_isEditingFileName || IsEditingLabel)
+        if (_isEditingFileName || _isEditingDiagramTabName || IsEditingLabel)
         {
             EndTextInputIme();
         }
@@ -144,6 +144,7 @@ public partial class Game1
         _editingNode = null;
         _editingTransition = null;
         _isEditingFileName = false;
+        _isEditingDiagramTabName = false;
         _fileNameTextBoxController.Clear();
         _fileNameEditWarning = string.Empty;
         _draggedHandleTransition = null;

@@ -60,7 +60,7 @@ public partial class Game1
 
     private DiagramNode? GetNodeHoverCueTarget()
     {
-        if (IsEditingLabel || _isEditingFileName || _draggedNode is not null || _resizedNode is not null || _draggedHandleTransition is not null || _isPanning || _linkSource is not null)
+        if (IsEditingLabel || _isEditingDiagramTabName || _isEditingFileName || _draggedNode is not null || _resizedNode is not null || _draggedHandleTransition is not null || _isPanning || _linkSource is not null)
         {
             return null;
         }
@@ -81,7 +81,7 @@ public partial class Game1
 
     private void DrawHoverCue(TimeSpan totalGameTime)
     {
-        if (IsEditingLabel || _isEditingFileName || _draggedNode is not null || _resizedNode is not null || _draggedHandleTransition is not null || _isPanning || _linkSource is not null)
+        if (IsEditingLabel || _isEditingDiagramTabName || _isEditingFileName || _draggedNode is not null || _resizedNode is not null || _draggedHandleTransition is not null || _isPanning || _linkSource is not null)
         {
             return;
         }

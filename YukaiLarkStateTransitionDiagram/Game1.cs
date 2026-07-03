@@ -57,6 +57,7 @@ public partial class Game1 : Game
     private Vector2 _cameraOffset;
     private float _cameraZoom = 1f;
     private bool _isEditingFileName;
+    private bool _isEditingDiagramTabName;
     private bool _isImeEnabledForTextInput = true;
     private int _currentDiagramIndex;
     private string _status = DefaultStatus;
@@ -115,7 +116,7 @@ public partial class Game1 : Game
     {
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
-        if (!_isEditingFileName && !IsEditingLabel)
+        if (!_isEditingFileName && !_isEditingDiagramTabName && !IsEditingLabel)
         {
             EnsureImeClosedForShortcutInput();
         }
@@ -174,6 +175,11 @@ public partial class Game1 : Game
             _fileNameTextBoxController.UpdateImeComposition();
             HandleFileNameEditingKeyboard(keyboard);
         }
+        else if (_isEditingDiagramTabName)
+        {
+            _textBoxController.UpdateImeComposition();
+            HandleDiagramTabNameEditingKeyboard(keyboard);
+        }
         else if (IsEditingLabel)
         {
             _textBoxController.UpdateImeComposition();
@@ -211,7 +217,15 @@ public partial class Game1 : Game
             ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0,
             _fileNameEditWarning);
         DrawThemeButton(GraphicsDevice.Viewport);
-        _diagramTabRenderer.DrawTabs(GraphicsDevice.Viewport, _diagrams, _currentDiagramIndex, _boardTheme);
+        _diagramTabRenderer.DrawTabs(
+            GraphicsDevice.Viewport,
+            _diagrams,
+            _currentDiagramIndex,
+            _boardTheme,
+            _isEditingDiagramTabName,
+            _textBoxController.GetDisplayText(),
+            _textBoxController.GetDisplayCaretIndex(),
+            ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0);
 
         // ［開始マーク作成アシスト］の描画
         DrawYukaiLarkMascot(GraphicsDevice.Viewport, gameTime.TotalGameTime);
@@ -375,7 +389,7 @@ public partial class Game1 : Game
         _shortcutKeyRenderer.DrawBottomHelp(
             GraphicsDevice.Viewport,
             gameTime.TotalGameTime,
-            IsEditingLabel,
+            IsEditingLabel || _isEditingDiagramTabName,
             _isExportSelecting,
             _isThemeMenuOpen,
             _hasExportSelection,

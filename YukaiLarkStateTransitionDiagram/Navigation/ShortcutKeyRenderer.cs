@@ -246,6 +246,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
                         new HelpHint("Ctrl+P", "PNG出力"),
                         new HelpHint("Ctrl+Tab", "図タブ切替"),
                         new HelpHint("Ctrl+Alt+N", "図タブ追加"),
+                        new HelpHint("Ctrl+W", "図タブ削除"),
                         new HelpHint("T", "テーマ選択"),
                         new HelpHint("0-9", "テーマ")
                     ]
@@ -290,6 +291,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
                         new HelpHint("Ctrl+P", "PNG出力"),
                         new HelpHint("Ctrl+Tab", "図タブ切替"),
                         new HelpHint("Ctrl+Alt+N", "図タブ追加"),
+                        new HelpHint("Ctrl+W", "図タブ削除"),
                         new HelpHint("T", "テーマ選択"),
                         new HelpHint("0-9", "テーマ")
                     ]
@@ -317,7 +319,8 @@ public sealed class ShortcutKeyRenderer : IDisposable
                     new HelpHint("Ctrl+O", "開く"),
                     new HelpHint("Ctrl+P", "PNG出力"),
                     new HelpHint("Ctrl+Tab", "図タブ切替"),
-                    new HelpHint("Ctrl+Alt+N", "図タブ追加")
+                    new HelpHint("Ctrl+Alt+N", "図タブ追加"),
+                    new HelpHint("F2", "図タブ名編集")
                 ]
             ),
             new HelpPage

@@ -42,7 +42,15 @@ public sealed class DiagramTabRenderer : IDisposable
         _uiTextTextureCache.Clear();
     }
 
-    public void DrawTabs(Viewport viewport, IReadOnlyList<DiagramInstance> diagrams, int activeIndex, BoardTheme theme)
+    public void DrawTabs(
+        Viewport viewport,
+        IReadOnlyList<DiagramInstance> diagrams,
+        int activeIndex,
+        BoardTheme theme,
+        bool isEditingActiveTabName = false,
+        string editingTabName = "",
+        int editingCaretIndex = 0,
+        bool showEditingCaret = false)
     {
         var barBounds = GetTabBarBounds(viewport);
         _spriteBatch.Draw(_pixel, barBounds, theme.HeaderBackgroundColor * 0.94f);
@@ -62,10 +70,24 @@ public sealed class DiagramTabRenderer : IDisposable
             _spriteBatch.Draw(_pixel, bounds, fill);
             DrawRectangleOutline(bounds, active ? theme.SelectedTransitionLineColor : theme.HeaderBorderColor);
 
-            var label = diagrams[i].Name;
-            var texture = GetUiTextTexture(label, 14, active);
-            var textX = bounds.X + Math.Max(8, (bounds.Width - texture.Width) / 2);
-            _spriteBatch.Draw(texture, new Vector2(textX, bounds.Y + 5), textColor);
+            var closeBounds = GetTabCloseBounds(viewport, diagrams, i);
+            if (isEditingActiveTabName && active)
+            {
+                DrawTabNameEditor(bounds, editingTabName, editingCaretIndex, showEditingCaret, theme);
+            }
+            else
+            {
+                var label = diagrams[i].Name;
+                var texture = GetUiTextTexture(label, 14, active);
+                var labelRight = closeBounds == Rectangle.Empty ? bounds.Right - 8 : closeBounds.X - 4;
+                var textX = bounds.X + Math.Max(8, (labelRight - bounds.X - texture.Width) / 2);
+                _spriteBatch.Draw(texture, new Vector2(textX, bounds.Y + 5), textColor);
+            }
+
+            if (closeBounds != Rectangle.Empty)
+            {
+                DrawUiText("x", new Vector2(closeBounds.X + 6, closeBounds.Y + 1), textColor, 13, true);
+            }
         }
 
         var addBounds = GetAddTabBounds(viewport, diagrams);
@@ -92,6 +114,17 @@ public sealed class DiagramTabRenderer : IDisposable
         return new Rectangle(LeftMargin + (index * (tabWidth + TabGap)), TabBarTop + 5, tabWidth, TabHeight);
     }
 
+    public static Rectangle GetTabCloseBounds(Viewport viewport, IReadOnlyList<DiagramInstance> diagrams, int index)
+    {
+        var tabBounds = GetTabBounds(viewport, diagrams, index);
+        if (tabBounds == Rectangle.Empty || diagrams.Count <= 1 || tabBounds.Width < 104)
+        {
+            return Rectangle.Empty;
+        }
+
+        return new Rectangle(tabBounds.Right - 25, tabBounds.Y + 5, 18, 18);
+    }
+
     public static Rectangle GetAddTabBounds(Viewport viewport, IReadOnlyList<DiagramInstance> diagrams)
     {
         var lastTab = diagrams.Count == 0 ? Rectangle.Empty : GetTabBounds(viewport, diagrams, diagrams.Count - 1);
@@ -102,6 +135,32 @@ public sealed class DiagramTabRenderer : IDisposable
         }
 
         return new Rectangle(x, TabBarTop + 5, 34, TabHeight);
+    }
+
+    private void DrawTabNameEditor(Rectangle tabBounds, string editingTabName, int editingCaretIndex, bool showEditingCaret, BoardTheme theme)
+    {
+        var editorBounds = new Rectangle(tabBounds.X + 5, tabBounds.Y + 4, tabBounds.Width - 34, tabBounds.Height - 8);
+        if (editorBounds.Width < 42)
+        {
+            return;
+        }
+
+        _spriteBatch.Draw(_pixel, editorBounds, Color.White * 0.12f);
+        DrawRectangleOutline(editorBounds, theme.HeaderBorderColor);
+
+        var textPosition = new Vector2(editorBounds.X + 4, editorBounds.Y + 1);
+        DrawUiText(editingTabName, textPosition, theme.HeaderTitleTextColor, 14, true);
+        if (!showEditingCaret)
+        {
+            return;
+        }
+
+        var clampedCaretIndex = Math.Clamp(editingCaretIndex, 0, editingTabName.Length);
+        var caretX = textPosition.X + TextRenderer.MeasureUiTextCaretOffset(editingTabName, clampedCaretIndex, 14, true);
+        var maxCaretX = editorBounds.Right - 3;
+        caretX = Math.Min(caretX, maxCaretX);
+        var caretBounds = new Rectangle((int)MathF.Round(caretX), editorBounds.Y + 3, 2, editorBounds.Height - 6);
+        _spriteBatch.Draw(_pixel, caretBounds, theme.HeaderTitleTextColor);
     }
 
     private void DrawRectangleOutline(Rectangle rectangle, Color color)

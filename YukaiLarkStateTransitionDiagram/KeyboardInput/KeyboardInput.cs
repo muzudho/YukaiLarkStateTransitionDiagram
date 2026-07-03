@@ -24,6 +24,15 @@ public partial class Game1
             return;
         }
 
+        if (_isEditingDiagramTabName)
+        {
+            if (!_textBoxController.TryInputCharacter(e.Character))
+            {
+                _status = "タブ名は24文字までです。";
+            }
+            return;
+        }
+
         if (!IsEditingLabel)
         {
             return;
@@ -58,6 +67,11 @@ public partial class Game1
         if (IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.Y))
         {
             RedoDiagramChange();
+            return;
+        }
+        if (IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.W))
+        {
+            DeleteCurrentDiagramTab();
             return;
         }
         if (IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.Tab))
@@ -136,6 +150,11 @@ public partial class Game1
                 BeginTransitionLabelEdit(_selectedTransition);
                 return;
             }
+            if (IsNewKeyPress(keyboard, Keys.F2))
+            {
+                BeginDiagramTabNameEdit();
+                return;
+            }
         }
 
         if (IsNewKeyPress(keyboard, Keys.N))
@@ -182,6 +201,19 @@ public partial class Game1
                 break;
             case TextBoxKeyboardAction.Cancel:
                 CancelLabelEdit();
+                break;
+        }
+    }
+
+    private void HandleDiagramTabNameEditingKeyboard(KeyboardState keyboard)
+    {
+        switch (_textBoxController.HandleKeyboard(keyboard, _previousKeyboard))
+        {
+            case TextBoxKeyboardAction.Commit:
+                CommitDiagramTabNameEdit();
+                break;
+            case TextBoxKeyboardAction.Cancel:
+                CancelDiagramTabNameEdit();
                 break;
         }
     }
