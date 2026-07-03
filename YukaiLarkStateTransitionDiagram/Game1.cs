@@ -34,6 +34,7 @@ public partial class Game1 : Game
     private EdgeRenderer _edgeRenderer = null!;
     private NodeRenderer _nodeRenderer = null!;
     private HeaderRenderer _headerRenderer = null!;
+    private DiagramTabRenderer _diagramTabRenderer = null!;
     private InspectorPanelRenderer _inspectorPanelRenderer = null!;
     private MiniMapRenderer _miniMapRenderer = null!;
     private ShortcutKeyRenderer _shortcutKeyRenderer = null!;
@@ -102,6 +103,7 @@ public partial class Game1 : Game
         _primitiveRenderer = new PrimitiveRenderer(_spriteBatch, _pixel);
         _edgeRenderer = new EdgeRenderer(_primitiveRenderer, _spriteBatch, GetLabelTexture, _boardTheme);
         _headerRenderer = new HeaderRenderer(GraphicsDevice, _spriteBatch, _pixel);
+        _diagramTabRenderer = new DiagramTabRenderer(GraphicsDevice, _spriteBatch, _pixel);
         _inspectorPanelRenderer = new InspectorPanelRenderer(GraphicsDevice, _spriteBatch, _pixel, _primitiveRenderer);
         _miniMapRenderer = new MiniMapRenderer(_spriteBatch, _pixel, _primitiveRenderer);
         _shortcutKeyRenderer = new ShortcutKeyRenderer(GraphicsDevice, _spriteBatch, _pixel, _keyCapTheme, _boardTheme);
@@ -209,6 +211,7 @@ public partial class Game1 : Game
             ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0,
             _fileNameEditWarning);
         DrawThemeButton(GraphicsDevice.Viewport);
+        _diagramTabRenderer.DrawTabs(GraphicsDevice.Viewport, _diagrams, _currentDiagramIndex, _boardTheme);
 
         // ［開始マーク作成アシスト］の描画
         DrawYukaiLarkMascot(GraphicsDevice.Viewport, gameTime.TotalGameTime);
@@ -249,6 +252,7 @@ public partial class Game1 : Game
         _yukaiLarkMascotLightThemeTexture = null;
         _yukaiLarkMascotDarkThemeTexture = null;
         _headerRenderer?.Dispose();
+        _diagramTabRenderer?.Dispose();
         _inspectorPanelRenderer?.Dispose();
         _shortcutKeyRenderer?.Dispose();
         base.UnloadContent();

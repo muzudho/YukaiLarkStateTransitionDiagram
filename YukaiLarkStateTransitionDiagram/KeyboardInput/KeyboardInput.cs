@@ -60,6 +60,23 @@ public partial class Game1
             RedoDiagramChange();
             return;
         }
+        if (IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.Tab))
+        {
+            if (IsShiftDown(keyboard))
+            {
+                SelectPreviousDiagramTab();
+            }
+            else
+            {
+                SelectNextDiagramTab();
+            }
+            return;
+        }
+        if (IsControlDown(keyboard) && IsAltDown(keyboard) && IsNewKeyPress(keyboard, Keys.N))
+        {
+            AddDiagramTab();
+            return;
+        }
         if (IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.N))
         {
             CreateNewDiagram();

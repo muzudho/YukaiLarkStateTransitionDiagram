@@ -84,6 +84,11 @@ public partial class Game1
                 return;
             }
 
+            if (TryHandleDiagramTabClick(mouse))
+            {
+                return;
+            }
+
             if (HeaderRenderer.GetTitleHitBounds(GraphicsDevice.Viewport).Contains(mouse.Position))
             {
                 BeginFileNameEdit();
@@ -627,7 +632,9 @@ public partial class Game1
             return MouseCursor.Arrow;
         }
 
-        if (IsMouseOverMiniMap(mouse) || CanPanFromMousePosition(keyboard, mouse))
+        if (IsMouseOverMiniMap(mouse)
+            || DiagramTabRenderer.GetTabBarBounds(GraphicsDevice.Viewport).Contains(mouse.Position)
+            || CanPanFromMousePosition(keyboard, mouse))
         {
             return MouseCursor.Hand;
         }

@@ -32,6 +32,13 @@ public sealed class DiagramInstance
     public static DiagramInstance CreateDefault()
         => new();
 
+    public static DiagramInstance CreateNew(int id)
+        => new()
+        {
+            Id = id,
+            Name = $"ダイアグラム{id}"
+        };
+
     public void RefreshNextNodeId()
         => NextNodeId = Nodes.Count == 0 ? 1 : Nodes.Max(node => node.Id) + 1;
 }

@@ -244,9 +244,10 @@ public sealed class ShortcutKeyRenderer : IDisposable
                     [
                         new HelpHint("Ctrl+O", "開く"),
                         new HelpHint("Ctrl+P", "PNG出力"),
+                        new HelpHint("Ctrl+Tab", "図タブ切替"),
+                        new HelpHint("Ctrl+Alt+N", "図タブ追加"),
                         new HelpHint("T", "テーマ選択"),
-                        new HelpHint("0-9", "テーマ"),
-                        new HelpHint("ホイール", "拡大縮小")
+                        new HelpHint("0-9", "テーマ")
                     ]
                 )
             ];
@@ -287,9 +288,10 @@ public sealed class ShortcutKeyRenderer : IDisposable
                     [
                         new HelpHint("Ctrl+O", "開く"),
                         new HelpHint("Ctrl+P", "PNG出力"),
+                        new HelpHint("Ctrl+Tab", "図タブ切替"),
+                        new HelpHint("Ctrl+Alt+N", "図タブ追加"),
                         new HelpHint("T", "テーマ選択"),
-                        new HelpHint("0-9", "テーマ"),
-                        new HelpHint("ホイール", "拡大縮小")
+                        new HelpHint("0-9", "テーマ")
                     ]
                 )
             ];
@@ -313,7 +315,9 @@ public sealed class ShortcutKeyRenderer : IDisposable
                 [
                     new HelpHint("Ctrl+Shift+S", "名前を付けて保存"),
                     new HelpHint("Ctrl+O", "開く"),
-                    new HelpHint("Ctrl+P", "PNG出力")
+                    new HelpHint("Ctrl+P", "PNG出力"),
+                    new HelpHint("Ctrl+Tab", "図タブ切替"),
+                    new HelpHint("Ctrl+Alt+N", "図タブ追加")
                 ]
             ),
             new HelpPage
