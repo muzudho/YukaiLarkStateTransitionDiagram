@@ -167,7 +167,7 @@ public partial class Game1
             if (existingIndex >= 0)
             {
                 SelectDiagramTab(existingIndex);
-                _status = $"{parentNode.Label} のサブステートへ入りました。Ctrl+Shift+EnterまたはAlt+Upで親の図へ戻れます。";
+                _status = $"{parentNode.Label} のサブステートへ入りました。Alt+Upで親の図へ戻れます。";
                 return;
             }
         }
@@ -184,7 +184,7 @@ public partial class Game1
         });
 
         ResetTransientDiagramInteractionState();
-        _status = $"{parentNode.Label} のサブステートを作成して入りました。Ctrl+Shift+EnterまたはAlt+Upで親の図へ戻れます。";
+        _status = $"{parentNode.Label} のサブステートを作成して入りました。Alt+Upで親の図へ戻れます。";
     }
 
     private void ExitToParentSubstate()

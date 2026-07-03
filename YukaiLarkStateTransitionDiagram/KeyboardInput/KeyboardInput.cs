@@ -138,18 +138,12 @@ public partial class Game1
             SuppressYukaiLarkAssist(suppressedAssistKind);
             return;
         }
-        if (IsControlDown(keyboard) && IsShiftDown(keyboard) && IsNewKeyPress(keyboard, Keys.Enter))
-        {
-            ExitToParentSubstate();
-            return;
-        }
         if (IsAltDown(keyboard) && IsNewKeyPress(keyboard, Keys.Up))
         {
             ExitToParentSubstate();
             return;
         }
-        if ((IsControlDown(keyboard) && IsNewKeyPress(keyboard, Keys.Enter))
-            || (IsAltDown(keyboard) && IsNewKeyPress(keyboard, Keys.Down)))
+        if (IsAltDown(keyboard) && IsNewKeyPress(keyboard, Keys.Down))
         {
             EnterSelectedNodeSubstate();
             return;

@@ -267,14 +267,12 @@ public sealed class ShortcutKeyRenderer : IDisposable
 
             if (selectedNode.Kind == NodeKind.Normal)
             {
-                nodeHints.Add(new HelpHint("Ctrl+Enter", "中へ入る"));
                 nodeHints.Add(new HelpHint("Alt+Down", "中へ入る"));
                 nodeHints.Add(new HelpHint("C", "色パレット"));
             }
 
             if (hasParentSubstate)
             {
-                nodeHints.Add(new HelpHint("Ctrl+Shift+Enter", "外へ戻る"));
                 nodeHints.Add(new HelpHint("Alt+Up", "外へ戻る"));
             }
 
@@ -322,7 +320,6 @@ public sealed class ShortcutKeyRenderer : IDisposable
 
         if (hasParentSubstate)
         {
-            commonFirstPageHints.Add(new HelpHint("Ctrl+Shift+Enter", "外へ戻る"));
             commonFirstPageHints.Add(new HelpHint("Alt+Up", "外へ戻る"));
         }
 
