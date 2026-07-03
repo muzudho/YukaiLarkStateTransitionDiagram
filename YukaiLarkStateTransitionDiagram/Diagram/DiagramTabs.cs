@@ -167,7 +167,7 @@ public partial class Game1
             if (existingIndex >= 0)
             {
                 SelectDiagramTab(existingIndex);
-                _status = $"{parentNode.Label} のサブステートへ入りました。";
+                _status = $"{parentNode.Label} のサブステートへ入りました。Ctrl+Shift+EnterまたはAlt+Upで親の図へ戻れます。";
                 return;
             }
         }
@@ -184,7 +184,44 @@ public partial class Game1
         });
 
         ResetTransientDiagramInteractionState();
-        _status = $"{parentNode.Label} のサブステートを作成して入りました。Ctrl+Tabで親の図へ戻れます。";
+        _status = $"{parentNode.Label} のサブステートを作成して入りました。Ctrl+Shift+EnterまたはAlt+Upで親の図へ戻れます。";
+    }
+
+    private void ExitToParentSubstate()
+    {
+        if (!TryFindParentSubstate(out var parentDiagramIndex, out var parentNode))
+        {
+            _status = "この図には戻り先の親ステートがありません。";
+            return;
+        }
+
+        SelectDiagramTab(parentDiagramIndex);
+        _status = $"{parentNode.Label} のある親の図へ戻りました。";
+    }
+
+    private bool HasParentSubstate()
+        => TryFindParentSubstate(out _, out _);
+
+    private bool TryFindParentSubstate(out int parentDiagramIndex, out DiagramNode parentNode)
+    {
+        var currentDiagramId = CurrentDiagram.Id;
+        for (var diagramIndex = 0; diagramIndex < _diagrams.Count; diagramIndex++)
+        {
+            var diagram = _diagrams[diagramIndex];
+            foreach (var node in diagram.Nodes)
+            {
+                if (node.Kind == NodeKind.Normal && node.SubstateDiagramId == currentDiagramId)
+                {
+                    parentDiagramIndex = diagramIndex;
+                    parentNode = node;
+                    return true;
+                }
+            }
+        }
+
+        parentDiagramIndex = -1;
+        parentNode = null!;
+        return false;
     }
 
     private static string GetSubstateDiagramName(DiagramNode parentNode)

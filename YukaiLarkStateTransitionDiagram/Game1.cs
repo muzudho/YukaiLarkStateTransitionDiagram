@@ -394,6 +394,7 @@ public partial class Game1 : Game
             _isThemeMenuOpen,
             _hasExportSelection,
             _nodes.Any(node => node.Kind == NodeKind.StartMarker),
+            HasParentSubstate(),
             _selectedNode,
             _selectedTransition);
     }

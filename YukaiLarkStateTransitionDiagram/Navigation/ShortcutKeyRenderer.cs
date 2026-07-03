@@ -65,6 +65,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
     /// <param name="isThemeMenuOpen">テーマ選択中かどうか</param>
     /// <param name="hasExportSelection">エクスポート範囲が作成済みかどうか</param>
     /// <param name="hasStartMarker">開始マークが存在するかどうか</param>
+    /// <param name="hasParentSubstate">現在の図に親サブステートがあるかどうか</param>
     /// <param name="selectedNode">選択されているノード</param>
     /// <param name="selectedTransition">選択されている遷移</param>
     public void DrawBottomHelp(
@@ -75,6 +76,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
         bool isThemeMenuOpen,
         bool hasExportSelection,
         bool hasStartMarker,
+        bool hasParentSubstate,
         DiagramNode? selectedNode,
         DiagramTransition? selectedTransition)
     {
@@ -86,7 +88,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
         var y = viewport.Height - 34;
         _spriteBatch.Draw(_pixel, new Rectangle(0, y, viewport.Width, 34), _boardTheme.BottomBarBackgroundColor);
 
-        var pages = GetHelpPages(isEditingLabel, isExportSelecting, isThemeMenuOpen, hasExportSelection, hasStartMarker, selectedNode, selectedTransition);
+        var pages = GetHelpPages(isEditingLabel, isExportSelecting, isThemeMenuOpen, hasExportSelection, hasStartMarker, hasParentSubstate, selectedNode, selectedTransition);
         if (pages.Length == 0)
         {
             return;
@@ -161,6 +163,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
         bool isThemeMenuOpen,
         bool hasExportSelection,
         bool hasStartMarker,
+        bool hasParentSubstate,
         DiagramNode? selectedNode,
         DiagramTransition? selectedTransition)
     {
@@ -265,7 +268,14 @@ public sealed class ShortcutKeyRenderer : IDisposable
             if (selectedNode.Kind == NodeKind.Normal)
             {
                 nodeHints.Add(new HelpHint("Ctrl+Enter", "中へ入る"));
+                nodeHints.Add(new HelpHint("Alt+Down", "中へ入る"));
                 nodeHints.Add(new HelpHint("C", "色パレット"));
+            }
+
+            if (hasParentSubstate)
+            {
+                nodeHints.Add(new HelpHint("Ctrl+Shift+Enter", "外へ戻る"));
+                nodeHints.Add(new HelpHint("Alt+Up", "外へ戻る"));
             }
 
             return
@@ -300,18 +310,27 @@ public sealed class ShortcutKeyRenderer : IDisposable
             ];
         }
 
+        var commonFirstPageHints = new List<HelpHint>
+        {
+            new("N", "状態追加"),
+            startMarkerHint,
+            new("E", "終了マーク追加"),
+            new("Ctrl+N", "新規作成"),
+            new("Ctrl+S", "保存"),
+            new("Ctrl+Z/Y", "元に戻す/やり直し")
+        };
+
+        if (hasParentSubstate)
+        {
+            commonFirstPageHints.Add(new HelpHint("Ctrl+Shift+Enter", "外へ戻る"));
+            commonFirstPageHints.Add(new HelpHint("Alt+Up", "外へ戻る"));
+        }
+
         return
         [
             new HelpPage
             (
-                [
-                    new HelpHint("N", "状態追加"),
-                    startMarkerHint,
-                    new HelpHint("E", "終了マーク追加"),
-                    new HelpHint("Ctrl+N", "新規作成"),
-                    new HelpHint("Ctrl+S", "保存"),
-                    new HelpHint("Ctrl+Z/Y", "元に戻す/やり直し")
-                ]
+                commonFirstPageHints.ToArray()
             ),
             new HelpPage
             (
