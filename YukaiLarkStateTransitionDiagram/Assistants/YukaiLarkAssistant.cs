@@ -2,6 +2,7 @@ namespace YukaiLarkStateTransitionDiagram.Assistants;
 
 using System;
 using YukaiLarkStateTransitionDiagram;
+using YukaiLarkStateTransitionDiagram.Navigation;
 using YukaiLarkStateTransitionDiagram.Theme;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -211,10 +212,12 @@ internal sealed class YukaiLarkAssistant
     private static Rectangle GetMascotTarget(Viewport viewport, int targetHeight, float bob, Rectangle avoidBounds)
     {
         const int margin = 22;
-        const int headerHeight = 58;
-        const int headerGap = 22;
+        const int topUiGap = 22;
         const int avoidGap = 24;
-        var topMargin = headerHeight + headerGap;
+        var topUiBottom = SubstateBreadcrumbRenderer.GetBreadcrumbBounds(viewport) is { IsEmpty: false } breadcrumbBounds
+            ? breadcrumbBounds.Bottom
+            : DiagramTabRenderer.GetTabBarBounds(viewport).Bottom;
+        var topMargin = topUiBottom + topUiGap;
         var bobOffset = (int)MathF.Round(bob);
         var target = new Rectangle(viewport.Width - MascotTargetWidth - margin, topMargin + bobOffset, MascotTargetWidth, targetHeight);
         if (!IntersectsWithGap(target, avoidBounds, avoidGap))
