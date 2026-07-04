@@ -422,7 +422,74 @@ public partial class Game1 : Game
         var content = new InspectorPanelContent();
         content.AddPrimary($"状態: {_nodes.Count}    遷移: {_transitions.Count}");
         content.AddSecondary(GetSelectionSummary());
+        AddSelectedNodeSubstateInspectorContent(content);
+        AddCurrentDiagramParentInspectorContent(content);
         return content;
+    }
+
+    private void AddSelectedNodeSubstateInspectorContent(InspectorPanelContent content)
+    {
+        if (_selectedNode is null || _selectedNode.Kind != NodeKind.Normal)
+        {
+            return;
+        }
+
+        content.AddSectionTitle("選択状態のサブステート");
+        if (_selectedNode.SubstateDiagramId is not { } substateDiagramId)
+        {
+            content.AddSecondary("接続先: なし");
+            return;
+        }
+
+        if (TryFindDiagramById(substateDiagramId, out var substateDiagram))
+        {
+            content.AddSecondary($"接続先: {TrimInspectorText(GetDiagramDisplayName(substateDiagram), 15)} / ID {substateDiagram.Id}");
+        }
+        else
+        {
+            content.AddSecondary($"接続先: 不明 / ID {substateDiagramId}");
+        }
+        content.AddAction("サブステート紐づけ解除", InspectorPanelAction.UnlinkSelectedNodeSubstate);
+    }
+
+    private void AddCurrentDiagramParentInspectorContent(InspectorPanelContent content)
+    {
+        if (!TryFindParentSubstate(out var parentDiagramIndex, out var parentNode))
+        {
+            return;
+        }
+
+        var parentDiagram = _diagrams[parentDiagramIndex];
+        content.AddSectionTitle("この図の親");
+        content.AddSecondary($"親: {TrimInspectorText(GetNodeDisplayLabel(parentNode), 12)} / {TrimInspectorText(GetDiagramDisplayName(parentDiagram), 10)}");
+        content.AddAction("親との紐づけ解除", InspectorPanelAction.UnlinkCurrentDiagramParentSubstate);
+    }
+
+    private bool TryFindDiagramById(int diagramId, out DiagramInstance diagram)
+    {
+        foreach (var candidate in _diagrams)
+        {
+            if (candidate.Id == diagramId)
+            {
+                diagram = candidate;
+                return true;
+            }
+        }
+
+        diagram = null!;
+        return false;
+    }
+
+    private static string GetDiagramDisplayName(DiagramInstance diagram)
+        => string.IsNullOrWhiteSpace(diagram.Name) ? $"ダイアグラム{diagram.Id}" : diagram.Name;
+
+    private static string GetNodeDisplayLabel(DiagramNode node)
+        => string.IsNullOrWhiteSpace(node.Label) ? $"状態{node.Id}" : node.Label;
+
+    private static string TrimInspectorText(string text, int maxLength)
+    {
+        var trimmed = text.Trim();
+        return trimmed.Length <= maxLength ? trimmed : $"{trimmed[..maxLength]}...";
     }
 
     private void DrawMiniMapOverlay()
@@ -469,6 +536,57 @@ public partial class Game1 : Game
         }
 
         return "選択: なし";
+    }
+
+    private bool TryHandleInspectorPanelClick(Point point)
+    {
+        var content = BuildInspectorPanelContent();
+        if (!InspectorPanelRenderer.TryGetActionAt(GraphicsDevice.Viewport, content, point, out var action))
+        {
+            return false;
+        }
+
+        switch (action)
+        {
+            case InspectorPanelAction.UnlinkSelectedNodeSubstate:
+                UnlinkSelectedNodeSubstate();
+                break;
+            case InspectorPanelAction.UnlinkCurrentDiagramParentSubstate:
+                UnlinkCurrentDiagramParentSubstate();
+                break;
+        }
+
+        return true;
+    }
+
+    private void UnlinkSelectedNodeSubstate()
+    {
+        if (_selectedNode is null || _selectedNode.Kind != NodeKind.Normal || _selectedNode.SubstateDiagramId is not { } substateDiagramId)
+        {
+            _status = "解除できるサブステート紐づけが選択されていません。";
+            return;
+        }
+
+        var nodeLabel = GetNodeDisplayLabel(_selectedNode);
+        var substateName = TryFindDiagramById(substateDiagramId, out var substateDiagram)
+            ? GetDiagramDisplayName(substateDiagram)
+            : $"ID {substateDiagramId}";
+        ExecuteUndoableChange(() => _selectedNode.SubstateDiagramId = null);
+        _status = $"{nodeLabel} と {substateName} のサブステート紐づけを解除しました。図はタブとして残ります。";
+    }
+
+    private void UnlinkCurrentDiagramParentSubstate()
+    {
+        if (!TryFindParentSubstate(out _, out var parentNode))
+        {
+            _status = "この図には解除できる親サブステート紐づけがありません。";
+            return;
+        }
+
+        var parentLabel = GetNodeDisplayLabel(parentNode);
+        var childName = GetDiagramDisplayName(CurrentDiagram);
+        ExecuteUndoableChange(() => parentNode.SubstateDiagramId = null);
+        _status = $"{parentLabel} と {childName} のサブステート紐づけを解除しました。図はタブとして残ります。";
     }
     private string GetHeaderTitle()
         => _currentFilePath is null ? "未保存のダイアグラム" : Path.GetFileName(_currentFilePath);
@@ -791,4 +909,3 @@ public static class PrimitiveText
         }
     }
 }
-

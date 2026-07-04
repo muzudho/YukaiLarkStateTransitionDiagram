@@ -59,12 +59,17 @@ public sealed class InspectorPanelRenderer : IDisposable
         _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, bounds.Width, 1), theme.PanelTopEdgeColor);
         _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Bottom - 1, bounds.Width, 1), theme.PanelBottomEdgeColor);
 
-        var linePosition = new Vector2(bounds.X + PanelHorizontalPadding, bounds.Y + PanelTopPadding);
-        foreach (var line in content.Lines)
+        for (var i = 0; i < content.Lines.Count; i++)
         {
+            var line = content.Lines[i];
+            if (line.Style == InspectorPanelTextStyle.Action)
+            {
+                DrawActionLine(line.Text, GetLineBounds(bounds, i), theme);
+                continue;
+            }
+
             var style = GetTextStyle(line.Style, theme);
-            DrawUiText(line.Text, linePosition, style.Color, style.Size, style.Bold);
-            linePosition.Y += LineAdvance;
+            DrawUiText(line.Text, GetLineTextPosition(bounds, i), style.Color, style.Size, style.Bold);
         }
     }
 
@@ -80,6 +85,32 @@ public sealed class InspectorPanelRenderer : IDisposable
         }
 
         bounds = GetPanelBounds(viewport, lineCount);
+        return true;
+    }
+
+    public static bool TryGetActionAt(Viewport viewport, InspectorPanelContent content, Point point, out InspectorPanelAction action)
+    {
+        action = InspectorPanelAction.None;
+        if (!TryGetPanelBounds(viewport, content.Lines.Count, out var bounds) || !bounds.Contains(point))
+        {
+            return false;
+        }
+
+        for (var i = 0; i < content.Lines.Count; i++)
+        {
+            var line = content.Lines[i];
+            if (line.Action == InspectorPanelAction.None)
+            {
+                continue;
+            }
+
+            if (GetLineBounds(bounds, i).Contains(point))
+            {
+                action = line.Action;
+                return true;
+            }
+        }
+
         return true;
     }
 
@@ -102,6 +133,16 @@ public sealed class InspectorPanelRenderer : IDisposable
         return Math.Max(PanelMinimumHeight, contentHeight);
     }
 
+    private static Rectangle GetLineBounds(Rectangle panelBounds, int index)
+        => new(
+            panelBounds.X + PanelHorizontalPadding,
+            panelBounds.Y + PanelTopPadding + (index * LineAdvance) - 2,
+            panelBounds.Width - (PanelHorizontalPadding * 2),
+            ApproximateLineHeight + 6);
+
+    private static Vector2 GetLineTextPosition(Rectangle panelBounds, int index)
+        => new(panelBounds.X + PanelHorizontalPadding, panelBounds.Y + PanelTopPadding + (index * LineAdvance));
+
     private static InspectorPanelTextAppearance GetTextStyle(InspectorPanelTextStyle style, BoardTheme theme)
         => style switch
         {
@@ -109,6 +150,18 @@ public sealed class InspectorPanelRenderer : IDisposable
             InspectorPanelTextStyle.SectionTitle => new InspectorPanelTextAppearance(theme.PanelPrimaryTextColor, 14, true),
             _ => new InspectorPanelTextAppearance(theme.PanelSecondaryTextColor, 15, false)
         };
+
+    private void DrawActionLine(string text, Rectangle bounds, BoardTheme theme)
+    {
+        var fill = WithAlpha(Blend(theme.PanelBackgroundColor, theme.SelectedTransitionLineColor, 0.22f), 245);
+        var edge = WithAlpha(theme.SelectedTransitionLineColor, 230);
+        _spriteBatch.Draw(_pixel, bounds, fill);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, bounds.Width, 1), edge);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Bottom - 1, bounds.Width, 1), edge);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, 1, bounds.Height), edge);
+        _spriteBatch.Draw(_pixel, new Rectangle(bounds.Right - 1, bounds.Y, 1, bounds.Height), edge);
+        DrawUiText(text, new Vector2(bounds.X + 10, bounds.Y + 3), theme.PanelPrimaryTextColor, 14, true);
+    }
 
     private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
     {
@@ -128,6 +181,19 @@ public sealed class InspectorPanelRenderer : IDisposable
         var texture = TextRenderer.CreateUiTextTexture(_graphicsDevice, text, size, bold);
         _uiTextTextureCache[cacheKey] = texture;
         return texture;
+    }
+
+    private static Color WithAlpha(Color color, byte alpha)
+        => new(color.R, color.G, color.B, alpha);
+
+    private static Color Blend(Color from, Color to, float amount)
+    {
+        var clamped = MathHelper.Clamp(amount, 0f, 1f);
+        return new Color(
+            (byte)MathF.Round(MathHelper.Lerp(from.R, to.R, clamped)),
+            (byte)MathF.Round(MathHelper.Lerp(from.G, to.G, clamped)),
+            (byte)MathF.Round(MathHelper.Lerp(from.B, to.B, clamped)),
+            (byte)MathF.Round(MathHelper.Lerp(from.A, to.A, clamped)));
     }
 
     private readonly record struct InspectorPanelTextAppearance(Color Color, float Size, bool Bold);

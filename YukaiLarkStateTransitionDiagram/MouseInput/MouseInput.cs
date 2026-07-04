@@ -107,6 +107,11 @@ public partial class Game1
                 return;
             }
 
+            if (TryHandleInspectorPanelClick(mouse.Position))
+            {
+                return;
+            }
+
             _isPanning = false;
             if (shiftDown && TryAddWaypointToExistingTransition(mousePosition))
             {

@@ -19,13 +19,27 @@ public sealed class InspectorPanelContent
 
     public void AddSectionTitle(string text)
         => _lines.Add(new InspectorPanelLine(text, InspectorPanelTextStyle.SectionTitle));
+
+    public void AddAction(string text, InspectorPanelAction action)
+        => _lines.Add(new InspectorPanelLine(text, InspectorPanelTextStyle.Action, action));
 }
 
-public readonly record struct InspectorPanelLine(string Text, InspectorPanelTextStyle Style);
+public readonly record struct InspectorPanelLine(
+    string Text,
+    InspectorPanelTextStyle Style,
+    InspectorPanelAction Action = InspectorPanelAction.None);
 
 public enum InspectorPanelTextStyle
 {
     Primary = 0,
     Secondary = 1,
-    SectionTitle = 2
+    SectionTitle = 2,
+    Action = 3
+}
+
+public enum InspectorPanelAction
+{
+    None = 0,
+    UnlinkSelectedNodeSubstate = 1,
+    UnlinkCurrentDiagramParentSubstate = 2
 }
