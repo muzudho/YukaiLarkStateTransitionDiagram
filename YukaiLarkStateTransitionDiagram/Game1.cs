@@ -413,12 +413,16 @@ public partial class Game1 : Game
     {
         _inspectorPanelRenderer.DrawInspectorPanel(
             GraphicsDevice.Viewport,
-            _nodes.Count,
-            _transitions.Count,
-            GetSelectionSummary(),
-            _nodes,
-            _cameraOffset,
+            BuildInspectorPanelContent(),
             _boardTheme);
+    }
+
+    private InspectorPanelContent BuildInspectorPanelContent()
+    {
+        var content = new InspectorPanelContent();
+        content.AddPrimary($"状態: {_nodes.Count}    遷移: {_transitions.Count}");
+        content.AddSecondary(GetSelectionSummary());
+        return content;
     }
 
     private void DrawMiniMapOverlay()
@@ -787,3 +791,4 @@ public static class PrimitiveText
         }
     }
 }
+

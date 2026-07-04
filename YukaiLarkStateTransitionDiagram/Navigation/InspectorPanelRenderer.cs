@@ -13,10 +13,16 @@ public sealed class InspectorPanelRenderer : IDisposable
 {
     private const int MinimumVisibleWidth = 560;
     private const int PanelWidth = 290;
-    private const int PanelHeight = 70;
+    private const int PanelMinimumHeight = 70;
     private const int PanelRightMargin = 12;
     private const int PanelMinimumTop = 86;
     private const int PanelBottomMargin = 194;
+    private const int PanelHorizontalPadding = 12;
+    private const int PanelTopPadding = 10;
+    private const int PanelBottomPadding = 10;
+    private const int LineAdvance = 26;
+    private const int ApproximateLineHeight = 20;
+    private const int DefaultLineCount = 2;
 
     private readonly GraphicsDevice _graphicsDevice;
     private readonly SpriteBatch _spriteBatch;
@@ -42,29 +48,30 @@ public sealed class InspectorPanelRenderer : IDisposable
 
     public void DrawInspectorPanel(
         Viewport viewport,
-        int nodeCount,
-        int transitionCount,
-        string selectionSummary,
-        IReadOnlyList<DiagramNode> nodes,
-        Vector2 cameraOffset,
+        InspectorPanelContent content,
         BoardTheme theme)
     {
-        if (viewport.Width < MinimumVisibleWidth)
-        {
-            return;
-        }
+        if (viewport.Width < MinimumVisibleWidth) return;
+        if (content.Lines.Count == 0) return;
 
-        var bounds = GetPanelBounds(viewport);
-        var x = bounds.X;
+        var bounds = GetPanelBounds(viewport, content.Lines.Count);
         _spriteBatch.Draw(_pixel, bounds, theme.PanelBackgroundColor);
         _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Y, bounds.Width, 1), theme.PanelTopEdgeColor);
         _spriteBatch.Draw(_pixel, new Rectangle(bounds.X, bounds.Bottom - 1, bounds.Width, 1), theme.PanelBottomEdgeColor);
 
-        DrawUiText($"状態: {nodeCount}    遷移: {transitionCount}", new Vector2(x + 12, bounds.Y + 10), theme.PanelPrimaryTextColor, 16, true);
-        DrawUiText(selectionSummary, new Vector2(x + 12, bounds.Y + 36), theme.PanelSecondaryTextColor, 15, false);
+        var linePosition = new Vector2(bounds.X + PanelHorizontalPadding, bounds.Y + PanelTopPadding);
+        foreach (var line in content.Lines)
+        {
+            var style = GetTextStyle(line.Style, theme);
+            DrawUiText(line.Text, linePosition, style.Color, style.Size, style.Bold);
+            linePosition.Y += LineAdvance;
+        }
     }
 
     public static bool TryGetPanelBounds(Viewport viewport, out Rectangle bounds)
+        => TryGetPanelBounds(viewport, DefaultLineCount, out bounds);
+
+    public static bool TryGetPanelBounds(Viewport viewport, int lineCount, out Rectangle bounds)
     {
         if (viewport.Width < MinimumVisibleWidth)
         {
@@ -72,16 +79,36 @@ public sealed class InspectorPanelRenderer : IDisposable
             return false;
         }
 
-        bounds = GetPanelBounds(viewport);
+        bounds = GetPanelBounds(viewport, lineCount);
         return true;
     }
 
-    private static Rectangle GetPanelBounds(Viewport viewport)
+    private static Rectangle GetPanelBounds(Viewport viewport, int lineCount)
     {
+        var panelHeight = GetPanelHeight(lineCount);
         var x = viewport.Width - PanelWidth - PanelRightMargin;
-        var y = Math.Max(PanelMinimumTop, viewport.Height - PanelHeight - PanelBottomMargin);
-        return new Rectangle(x, y, PanelWidth, PanelHeight);
+        var y = Math.Max(PanelMinimumTop, viewport.Height - panelHeight - PanelBottomMargin);
+        return new Rectangle(x, y, PanelWidth, panelHeight);
     }
+
+    private static int GetPanelHeight(int lineCount)
+    {
+        if (lineCount <= 0) return PanelMinimumHeight;
+
+        var contentHeight = PanelTopPadding
+            + ((lineCount - 1) * LineAdvance)
+            + ApproximateLineHeight
+            + PanelBottomPadding;
+        return Math.Max(PanelMinimumHeight, contentHeight);
+    }
+
+    private static InspectorPanelTextAppearance GetTextStyle(InspectorPanelTextStyle style, BoardTheme theme)
+        => style switch
+        {
+            InspectorPanelTextStyle.Primary => new InspectorPanelTextAppearance(theme.PanelPrimaryTextColor, 16, true),
+            InspectorPanelTextStyle.SectionTitle => new InspectorPanelTextAppearance(theme.PanelPrimaryTextColor, 14, true),
+            _ => new InspectorPanelTextAppearance(theme.PanelSecondaryTextColor, 15, false)
+        };
 
     private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
     {
@@ -102,4 +129,6 @@ public sealed class InspectorPanelRenderer : IDisposable
         _uiTextTextureCache[cacheKey] = texture;
         return texture;
     }
+
+    private readonly record struct InspectorPanelTextAppearance(Color Color, float Size, bool Bold);
 }
