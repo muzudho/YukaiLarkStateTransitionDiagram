@@ -268,6 +268,7 @@ public sealed class ShortcutKeyRenderer : IDisposable
             if (selectedNode.Kind == NodeKind.Normal)
             {
                 nodeHints.Add(new HelpHint("Alt+Down", "中へ入る"));
+                nodeHints.Add(new HelpHint("Ctrl+Alt+Down", "既存へ紐づけ"));
                 nodeHints.Add(new HelpHint("C", "色パレット"));
             }
 

@@ -143,6 +143,11 @@ public partial class Game1
             ExitToParentSubstate();
             return;
         }
+        if (IsControlDown(keyboard) && IsAltDown(keyboard) && IsNewKeyPress(keyboard, Keys.Down))
+        {
+            OpenSubstateLinkMenu();
+            return;
+        }
         if (IsAltDown(keyboard) && IsNewKeyPress(keyboard, Keys.Down))
         {
             EnterSelectedNodeSubstate();

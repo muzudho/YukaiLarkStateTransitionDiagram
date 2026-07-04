@@ -145,6 +145,16 @@ public partial class Game1 : Game
             return;
         }
 
+        if (_isSubstateLinkMenuOpen)
+        {
+            HandleSubstateLinkMenuKeyboard(keyboard);
+            HandleSubstateLinkMenuMouse(mouse);
+            UpdateMouseCursor(keyboard, mouse);
+            _previousKeyboard = keyboard;
+            _previousMouse = mouse;
+            base.Update(gameTime);
+            return;
+        }
         if (_isColorPaletteOpen)
         {
             HandleColorPaletteKeyboard(keyboard);
@@ -238,6 +248,7 @@ public partial class Game1 : Game
         }
 
         DrawColorPaletteOverlay();
+        DrawSubstateLinkMenuOverlay();
         DrawExportSelectionOverlay();
         DrawExportPhotoEffectOverlay();
         DrawThemeMenuOverlay();

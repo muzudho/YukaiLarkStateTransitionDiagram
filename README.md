@@ -67,6 +67,8 @@ Visual Studio から起動する場合は、`YukaiLarkStateTransitionDiagram.sln
 | 状態や遷移のラベルを編集 | 選択して `F2` または `Enter` |
 | 遷移を作成 | `Shift` + 状態から状態へ左ドラッグ |
 | 自己ループを作成 | `Shift` + 同じ状態上で左ドラッグして離す |
+| 通常ノードの中へ入る | `Alt + Down` |
+| 既存サブステートへ紐づけ | `Ctrl + Alt + Down` |
 | 保存 | `Ctrl + S` |
 | 開く | `Ctrl + O` |
 | PNG画像として出力 | `Ctrl + P` |
