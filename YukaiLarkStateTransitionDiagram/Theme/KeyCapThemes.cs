@@ -46,6 +46,12 @@ public static class KeyCapThemes
     public static IKeyCapTheme Halloween { get; } = new HalloweenKeyCapTheme();
     public static IKeyCapTheme Tricolore { get; } = new TricoloreKeyCapTheme();
     public static IKeyCapTheme Okinawa { get; } = new OkinawaKeyCapTheme();
+    public static IKeyCapTheme Cardboard { get; } = new CardboardKeyCapTheme();
+    public static IKeyCapTheme SwimmingPool { get; } = new SwimmingPoolKeyCapTheme();
+    public static IKeyCapTheme ChineseDragon { get; } = new ChineseDragonKeyCapTheme();
+    public static IKeyCapTheme KidsRoom { get; } = new KidsRoomKeyCapTheme();
+    public static IKeyCapTheme Bank { get; } = new BankKeyCapTheme();
+    public static IKeyCapTheme Casino { get; } = new CasinoKeyCapTheme();
     public static IReadOnlyList<IKeyCapTheme> AllThemes { get; } =
     [
         YukaiLark,
@@ -87,7 +93,13 @@ public static class KeyCapThemes
         DyeingPoisonDartFrog,
         Halloween,
         Tricolore,
-        Okinawa
+        Okinawa,
+        Cardboard,
+        SwimmingPool,
+        ChineseDragon,
+        KidsRoom,
+        Bank,
+        Casino
     ];
 
     public static IReadOnlyList<IKeyCapTheme> ShortcutThemes { get; } =
