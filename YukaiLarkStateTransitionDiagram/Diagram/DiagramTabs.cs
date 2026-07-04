@@ -146,6 +146,39 @@ public partial class Game1
         return true;
     }
 
+    private bool TryHandleSubstateBreadcrumbClick(MouseState mouse)
+    {
+        var viewport = GraphicsDevice.Viewport;
+        if (!SubstateBreadcrumbRenderer.GetBreadcrumbBounds(viewport).Contains(mouse.Position))
+        {
+            return false;
+        }
+
+        var path = BuildSubstateBreadcrumbPath();
+        var itemIndex = SubstateBreadcrumbRenderer.GetBreadcrumbItemIndexAt(viewport, path, mouse.Position);
+        if (itemIndex < 0 || itemIndex >= path.Count)
+        {
+            return true;
+        }
+
+        var diagramId = path[itemIndex].DiagramId;
+        var diagramIndex = _diagrams.FindIndex(diagram => diagram.Id == diagramId);
+        if (diagramIndex < 0)
+        {
+            _status = "パンくずの移動先が見つかりませんでした。";
+            return true;
+        }
+
+        if (diagramIndex == _currentDiagramIndex)
+        {
+            _status = $"{CurrentDiagram.Name} を表示中です。";
+            return true;
+        }
+
+        SelectDiagramTab(diagramIndex);
+        return true;
+    }
+
     private void EnterSelectedNodeSubstate()
     {
         if (_selectedNode is null)
@@ -202,27 +235,34 @@ public partial class Game1
     private bool HasParentSubstate()
         => TryFindParentSubstate(out _, out _);
 
-    private List<string> BuildSubstateBreadcrumbPath()
+    private List<SubstateBreadcrumbItem> BuildSubstateBreadcrumbPath()
     {
-        var path = new List<string>();
+        var path = new List<SubstateBreadcrumbItem>();
         var visited = new HashSet<int>();
         var currentDiagramId = CurrentDiagram.Id;
+        var leafDiagramId = CurrentDiagram.Id;
         var currentDiagramName = GetDiagramDisplayName(CurrentDiagram);
 
         while (visited.Add(currentDiagramId)
             && TryFindParentSubstate(currentDiagramId, out var parentDiagramIndex, out var parentNode))
         {
-            path.Add(GetNodeDisplayLabel(parentNode));
+            path.Add(new SubstateBreadcrumbItem(
+                GetNodeDisplayLabel(parentNode),
+                currentDiagramId,
+                currentDiagramId == leafDiagramId));
             currentDiagramId = _diagrams[parentDiagramIndex].Id;
         }
 
         if (TryFindDiagramById(currentDiagramId, out var rootDiagram))
         {
-            path.Add(GetDiagramDisplayName(rootDiagram));
+            path.Add(new SubstateBreadcrumbItem(
+                GetDiagramDisplayName(rootDiagram),
+                currentDiagramId,
+                currentDiagramId == leafDiagramId));
         }
         else
         {
-            path.Add(currentDiagramName);
+            path.Add(new SubstateBreadcrumbItem(currentDiagramName, leafDiagramId, true));
         }
 
         path.Reverse();
@@ -231,6 +271,7 @@ public partial class Game1
 
     private bool TryFindParentSubstate(out int parentDiagramIndex, out DiagramNode parentNode)
         => TryFindParentSubstate(CurrentDiagram.Id, out parentDiagramIndex, out parentNode);
+
 
     private bool TryFindParentSubstate(int childDiagramId, out int parentDiagramIndex, out DiagramNode parentNode)
     {

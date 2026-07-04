@@ -89,7 +89,7 @@ public partial class Game1
                 return;
             }
 
-            if (SubstateBreadcrumbRenderer.GetBreadcrumbBounds(GraphicsDevice.Viewport).Contains(mouse.Position))
+            if (TryHandleSubstateBreadcrumbClick(mouse))
             {
                 return;
             }

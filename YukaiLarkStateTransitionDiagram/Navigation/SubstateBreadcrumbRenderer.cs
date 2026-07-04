@@ -7,6 +7,8 @@ using YukaiLarkStateTransitionDiagram.Theme;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
+public sealed record SubstateBreadcrumbItem(string Label, int DiagramId, bool IsCurrent);
+
 /// <summary>
 /// 現在のサブステート階層を表すパンくずリストの描画。
 /// </summary>
@@ -17,8 +19,14 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
 
     private const int MinimumVisibleWidth = 420;
     private const int HorizontalPadding = 12;
-    private const int TextY = BreadcrumbTop + 6;
+    private const int ButtonPaddingX = 7;
+    private const int ButtonTop = BreadcrumbTop + 4;
+    private const int ButtonHeight = 22;
+    private const int ButtonGap = 6;
+    private const int TextY = BreadcrumbTop + 7;
     private const float TextSize = 14f;
+    private const string PrefixText = "現在位置:";
+    private const string SeparatorText = ">";
 
     private readonly GraphicsDevice _graphicsDevice;
     private readonly SpriteBatch _spriteBatch;
@@ -42,7 +50,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         _uiTextTextureCache.Clear();
     }
 
-    public void DrawBreadcrumb(Viewport viewport, IReadOnlyList<string> path, BoardTheme theme)
+    public void DrawBreadcrumb(Viewport viewport, IReadOnlyList<SubstateBreadcrumbItem> path, BoardTheme theme)
     {
         if (viewport.Width < MinimumVisibleWidth || path.Count == 0)
         {
@@ -53,8 +61,45 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         _spriteBatch.Draw(_pixel, bounds, theme.HeaderBackgroundColor * 0.88f);
         _spriteBatch.Draw(_pixel, new Rectangle(0, bounds.Bottom - 1, viewport.Width, 1), theme.HeaderBorderColor);
 
-        var text = FitBreadcrumbText(path, viewport.Width - HorizontalPadding * 2);
-        DrawUiText(text, new Vector2(HorizontalPadding, TextY), theme.HeaderStatusTextColor, TextSize, false);
+        var entries = BuildVisibleEntries(path, viewport.Width - HorizontalPadding * 2);
+        var x = DrawUiText(PrefixText, new Vector2(HorizontalPadding, TextY), theme.HeaderStatusTextColor, TextSize, false) + ButtonGap;
+        for (var i = 0; i < entries.Count; i++)
+        {
+            if (i > 0)
+            {
+                x = DrawUiText(SeparatorText, new Vector2(x, TextY), theme.HeaderStatusTextColor, TextSize, false) + ButtonGap;
+            }
+
+            var entry = entries[i];
+            var textWidth = TextRenderer.MeasureUiTextWidth(entry.Label, TextSize, false);
+            if (entry.SourceIndex.HasValue)
+            {
+                var item = path[entry.SourceIndex.Value];
+                var buttonBounds = new Rectangle(
+                    (int)MathF.Round(x),
+                    ButtonTop,
+                    (int)MathF.Ceiling(textWidth) + ButtonPaddingX * 2,
+                    ButtonHeight);
+                var buttonColor = item.IsCurrent
+                    ? theme.SelectedTransitionLineColor * 0.22f
+                    : theme.HeaderBorderColor * 0.20f;
+                var borderColor = item.IsCurrent
+                    ? theme.SelectedTransitionLineColor * 0.80f
+                    : theme.HeaderBorderColor * 0.70f;
+
+                _spriteBatch.Draw(_pixel, buttonBounds, buttonColor);
+                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.X, buttonBounds.Y, buttonBounds.Width, 1), borderColor);
+                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.X, buttonBounds.Bottom - 1, buttonBounds.Width, 1), borderColor);
+                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.X, buttonBounds.Y, 1, buttonBounds.Height), borderColor);
+                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.Right - 1, buttonBounds.Y, 1, buttonBounds.Height), borderColor);
+
+                DrawUiText(entry.Label, new Vector2(buttonBounds.X + ButtonPaddingX, TextY), theme.HeaderTitleTextColor, TextSize, false);
+                x = buttonBounds.Right + ButtonGap;
+                continue;
+            }
+
+            x = DrawUiText(entry.Label, new Vector2(x, TextY), theme.HeaderStatusTextColor, TextSize, false) + ButtonGap;
+        }
     }
 
     public static Rectangle GetBreadcrumbBounds(Viewport viewport)
@@ -67,30 +112,92 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         return new Rectangle(0, BreadcrumbTop, viewport.Width, BreadcrumbHeight);
     }
 
-    private static string FitBreadcrumbText(IReadOnlyList<string> path, int maxWidth)
+    public static int GetBreadcrumbItemIndexAt(Viewport viewport, IReadOnlyList<SubstateBreadcrumbItem> path, Point point)
     {
-        var normalized = path
-            .Select(item => string.IsNullOrWhiteSpace(item) ? "無名" : item.Trim())
-            .ToList();
-        var text = $"現在位置: {string.Join(" > ", normalized)}";
-        if (TextRenderer.MeasureUiTextWidth(text, TextSize, false) <= maxWidth || normalized.Count <= 2)
+        if (!GetBreadcrumbBounds(viewport).Contains(point) || path.Count == 0)
         {
-            return text;
+            return -1;
         }
 
-        for (var hiddenCount = normalized.Count - 2; hiddenCount > 0; hiddenCount--)
+        var entries = BuildVisibleEntries(path, viewport.Width - HorizontalPadding * 2);
+        var x = HorizontalPadding + TextRenderer.MeasureUiTextWidth(PrefixText, TextSize, false) + ButtonGap;
+        for (var i = 0; i < entries.Count; i++)
         {
-            var shortened = new List<string> { normalized[0], "..." };
-            shortened.AddRange(normalized.Skip(hiddenCount + 1));
-            text = $"現在位置: {string.Join(" > ", shortened)}";
-            if (TextRenderer.MeasureUiTextWidth(text, TextSize, false) <= maxWidth)
+            if (i > 0)
             {
-                return text;
+                x += TextRenderer.MeasureUiTextWidth(SeparatorText, TextSize, false) + ButtonGap;
+            }
+
+            var entry = entries[i];
+            var textWidth = TextRenderer.MeasureUiTextWidth(entry.Label, TextSize, false);
+            if (entry.SourceIndex.HasValue)
+            {
+                var buttonBounds = new Rectangle(
+                    (int)MathF.Round(x),
+                    ButtonTop,
+                    (int)MathF.Ceiling(textWidth) + ButtonPaddingX * 2,
+                    ButtonHeight);
+                if (buttonBounds.Contains(point))
+                {
+                    return entry.SourceIndex.Value;
+                }
+
+                x = buttonBounds.Right + ButtonGap;
+                continue;
+            }
+
+            x += textWidth + ButtonGap;
+        }
+
+        return -1;
+    }
+
+    private static List<BreadcrumbEntry> BuildVisibleEntries(IReadOnlyList<SubstateBreadcrumbItem> path, int maxWidth)
+    {
+        var normalized = path
+            .Select((item, index) => new BreadcrumbEntry(NormalizeLabel(item.Label), index))
+            .ToList();
+
+        if (MeasureEntriesWidth(normalized) <= maxWidth || normalized.Count <= 2)
+        {
+            return normalized;
+        }
+
+        for (var firstVisibleTail = 2; firstVisibleTail < normalized.Count; firstVisibleTail++)
+        {
+            var shortened = new List<BreadcrumbEntry> { normalized[0], new("...", null) };
+            shortened.AddRange(normalized.Skip(firstVisibleTail));
+            if (MeasureEntriesWidth(shortened) <= maxWidth)
+            {
+                return shortened;
             }
         }
 
-        return $"現在位置: ... > {normalized[^1]}";
+        return new List<BreadcrumbEntry> { new("...", null), normalized[^1] };
     }
+
+    private static float MeasureEntriesWidth(IReadOnlyList<BreadcrumbEntry> entries)
+    {
+        var width = TextRenderer.MeasureUiTextWidth(PrefixText, TextSize, false) + ButtonGap;
+        for (var i = 0; i < entries.Count; i++)
+        {
+            if (i > 0)
+            {
+                width += TextRenderer.MeasureUiTextWidth(SeparatorText, TextSize, false) + ButtonGap;
+            }
+
+            var textWidth = TextRenderer.MeasureUiTextWidth(entries[i].Label, TextSize, false);
+            width += entries[i].SourceIndex.HasValue
+                ? textWidth + ButtonPaddingX * 2
+                : textWidth;
+            width += ButtonGap;
+        }
+
+        return width;
+    }
+
+    private static string NormalizeLabel(string label)
+        => string.IsNullOrWhiteSpace(label) ? "無名" : label.Trim();
 
     private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
     {
@@ -111,4 +218,6 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         _uiTextTextureCache[cacheKey] = texture;
         return texture;
     }
+
+    private sealed record BreadcrumbEntry(string Label, int? SourceIndex);
 }
