@@ -93,9 +93,7 @@ public sealed class EdgeRenderer
 
     public void DrawTransitionPathHoverCue(DiagramTransition transition, IReadOnlyList<Vector2> points, TimeSpan totalGameTime)
     {
-        _ = totalGameTime;
-        DrawPathStroke(points, transition.SegmentControls, Theme.TransitionLineColor * 0.28f, 8f);
-        DrawPathStroke(points, transition.SegmentControls, Theme.TransitionLineColor * 0.9f, 4f);
+        DrawWobblingPathStroke(points, transition.SegmentControls, totalGameTime);
     }
 
     /// <summary>
@@ -686,7 +684,50 @@ public sealed class EdgeRenderer
         }
     }
 
+    private void DrawWobblingPathStroke(IReadOnlyList<Vector2> points, IReadOnlyList<TransitionSegmentControls>? segmentControls, TimeSpan totalGameTime)
+    {
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        const int segmentsPerPathSegment = 32;
+        const float wobbleAmplitude = 2.2f;
+        var phase = (float)totalGameTime.TotalSeconds * 18f;
+        var totalLength = GetTransitionPathLength(points, segmentControls);
+        if (totalLength <= 0f)
+        {
+            return;
+        }
+
+        var walked = 0f;
+        Vector2? previous = null;
+        for (var segment = 0; segment < points.Count - 1; segment++)
+        {
+            GetTransitionPathSegmentControlPoints(points, segment, segmentControls, out var control1, out var control2);
+            var segmentLength = GetCubicBezierLength(points[segment], control1, control2, points[segment + 1]);
+            for (var i = 0; i <= segmentsPerPathSegment; i++)
+            {
+                var t = i / (float)segmentsPerPathSegment;
+                var waveT = (walked + (segmentLength * t)) / totalLength;
+                var current = GetWobblingBezierPoint(points[segment], control1, control2, points[segment + 1], t, phase, wobbleAmplitude, waveT);
+                if (previous.HasValue)
+                {
+                    _primitiveRenderer.DrawLine(previous.Value, current, Theme.TransitionLineColor * 0.28f, 8f);
+                    _primitiveRenderer.DrawLine(previous.Value, current, Theme.TransitionLineColor * 0.9f, 4f);
+                }
+
+                previous = current;
+            }
+
+            walked += segmentLength;
+        }
+    }
+
     private static Vector2 GetWobblingBezierPoint(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, float t, float phase, float amplitude)
+        => GetWobblingBezierPoint(start, control1, control2, end, t, phase, amplitude, t);
+
+    private static Vector2 GetWobblingBezierPoint(Vector2 start, Vector2 control1, Vector2 control2, Vector2 end, float t, float phase, float amplitude, float waveT)
     {
         var point = CubicBezier(start, control1, control2, end, t);
         var tangent = CubicBezierTangent(start, control1, control2, end, t);
@@ -698,7 +739,7 @@ public sealed class EdgeRenderer
         var normal = tangent.LengthSquared() > 0.01f
             ? Vector2.Normalize(new Vector2(-tangent.Y, tangent.X))
             : Vector2.UnitY;
-        var wobble = MathF.Sin(phase + (t * MathHelper.TwoPi * 3f)) * amplitude;
+        var wobble = MathF.Sin(phase + (waveT * MathHelper.TwoPi * 3f)) * amplitude;
         return point + (normal * wobble);
     }
 
