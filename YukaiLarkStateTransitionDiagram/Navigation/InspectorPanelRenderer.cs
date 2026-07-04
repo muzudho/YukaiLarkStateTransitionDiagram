@@ -15,7 +15,7 @@ public sealed class InspectorPanelRenderer : IDisposable
     private const int PanelWidth = 290;
     private const int PanelMinimumHeight = 70;
     private const int PanelRightMargin = 12;
-    private const int PanelMinimumTop = 86;
+    private const int PanelMinimumTop = SubstateBreadcrumbRenderer.BreadcrumbTop + SubstateBreadcrumbRenderer.BreadcrumbHeight;
     private const int PanelBottomMargin = 194;
     private const int PanelHorizontalPadding = 12;
     private const int PanelTopPadding = 10;

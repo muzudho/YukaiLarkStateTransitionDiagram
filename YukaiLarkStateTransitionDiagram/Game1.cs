@@ -35,6 +35,7 @@ public partial class Game1 : Game
     private NodeRenderer _nodeRenderer = null!;
     private HeaderRenderer _headerRenderer = null!;
     private DiagramTabRenderer _diagramTabRenderer = null!;
+    private SubstateBreadcrumbRenderer _substateBreadcrumbRenderer = null!;
     private InspectorPanelRenderer _inspectorPanelRenderer = null!;
     private MiniMapRenderer _miniMapRenderer = null!;
     private ShortcutKeyRenderer _shortcutKeyRenderer = null!;
@@ -105,6 +106,7 @@ public partial class Game1 : Game
         _edgeRenderer = new EdgeRenderer(_primitiveRenderer, _spriteBatch, GetLabelTexture, _boardTheme);
         _headerRenderer = new HeaderRenderer(GraphicsDevice, _spriteBatch, _pixel);
         _diagramTabRenderer = new DiagramTabRenderer(GraphicsDevice, _spriteBatch, _pixel);
+        _substateBreadcrumbRenderer = new SubstateBreadcrumbRenderer(GraphicsDevice, _spriteBatch, _pixel);
         _inspectorPanelRenderer = new InspectorPanelRenderer(GraphicsDevice, _spriteBatch, _pixel, _primitiveRenderer);
         _miniMapRenderer = new MiniMapRenderer(_spriteBatch, _pixel, _primitiveRenderer);
         _shortcutKeyRenderer = new ShortcutKeyRenderer(GraphicsDevice, _spriteBatch, _pixel, _keyCapTheme, _boardTheme);
@@ -236,6 +238,10 @@ public partial class Game1 : Game
             _textBoxController.GetDisplayText(),
             _textBoxController.GetDisplayCaretIndex(),
             ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0);
+        _substateBreadcrumbRenderer.DrawBreadcrumb(
+            GraphicsDevice.Viewport,
+            BuildSubstateBreadcrumbPath(),
+            _boardTheme);
 
         // ［開始マーク作成アシスト］の描画
         DrawYukaiLarkMascot(GraphicsDevice.Viewport, gameTime.TotalGameTime);
@@ -279,6 +285,7 @@ public partial class Game1 : Game
         _headerRenderer?.Dispose();
         _diagramTabRenderer?.Dispose();
         _inspectorPanelRenderer?.Dispose();
+        _substateBreadcrumbRenderer?.Dispose();
         _shortcutKeyRenderer?.Dispose();
         base.UnloadContent();
     }
@@ -514,7 +521,7 @@ public partial class Game1 : Game
 
         var x = viewport.Width - MiniMapWidth - MiniMapRightMargin;
         var y = viewport.Height - MiniMapHeight - MiniMapBottomMargin;
-        bounds = new Rectangle(x, Math.Max(86, y), MiniMapWidth, MiniMapHeight);
+        bounds = new Rectangle(x, Math.Max(SubstateBreadcrumbRenderer.BreadcrumbTop + SubstateBreadcrumbRenderer.BreadcrumbHeight, y), MiniMapWidth, MiniMapHeight);
         return true;
     }
 

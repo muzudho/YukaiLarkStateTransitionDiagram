@@ -202,15 +202,44 @@ public partial class Game1
     private bool HasParentSubstate()
         => TryFindParentSubstate(out _, out _);
 
-    private bool TryFindParentSubstate(out int parentDiagramIndex, out DiagramNode parentNode)
+    private List<string> BuildSubstateBreadcrumbPath()
     {
+        var path = new List<string>();
+        var visited = new HashSet<int>();
         var currentDiagramId = CurrentDiagram.Id;
+        var currentDiagramName = GetDiagramDisplayName(CurrentDiagram);
+
+        while (visited.Add(currentDiagramId)
+            && TryFindParentSubstate(currentDiagramId, out var parentDiagramIndex, out var parentNode))
+        {
+            path.Add(GetNodeDisplayLabel(parentNode));
+            currentDiagramId = _diagrams[parentDiagramIndex].Id;
+        }
+
+        if (TryFindDiagramById(currentDiagramId, out var rootDiagram))
+        {
+            path.Add(GetDiagramDisplayName(rootDiagram));
+        }
+        else
+        {
+            path.Add(currentDiagramName);
+        }
+
+        path.Reverse();
+        return path;
+    }
+
+    private bool TryFindParentSubstate(out int parentDiagramIndex, out DiagramNode parentNode)
+        => TryFindParentSubstate(CurrentDiagram.Id, out parentDiagramIndex, out parentNode);
+
+    private bool TryFindParentSubstate(int childDiagramId, out int parentDiagramIndex, out DiagramNode parentNode)
+    {
         for (var diagramIndex = 0; diagramIndex < _diagrams.Count; diagramIndex++)
         {
             var diagram = _diagrams[diagramIndex];
             foreach (var node in diagram.Nodes)
             {
-                if (node.Kind == NodeKind.Normal && node.SubstateDiagramId == currentDiagramId)
+                if (node.Kind == NodeKind.Normal && node.SubstateDiagramId == childDiagramId)
                 {
                     parentDiagramIndex = diagramIndex;
                     parentNode = node;
