@@ -56,6 +56,8 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
             return;
         }
 
+        _spriteBatch.Draw(_pixel, GetBreadcrumbBounds(viewport), theme.BackgroundColor * 0.68f);
+
         var entries = BuildVisibleEntries(path, viewport.Width - HorizontalPadding * 2);
         var x = (float)HorizontalPadding;
         for (var i = 0; i < entries.Count; i++)
