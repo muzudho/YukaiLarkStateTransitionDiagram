@@ -21,6 +21,10 @@ using Microsoft.Xna.Framework.Graphics;
 /// </summary>
 public static class TextRenderer
 {
+    private const int MaxTextMeasureWidth = 4096;
+    private const int MaxUiTextTextureWidth = 4096;
+    private const int MaxLabelTextTextureWidth = 2400;
+
     /// <summary>
     /// 文字列を描画してテクスチャを作成する。
     /// </summary>
@@ -63,8 +67,8 @@ public static class TextRenderer
         using var font = CreateJapaneseFont(size, bold);
         using var measureBitmap = new DrawingBitmap(1, 1);
         using var measureGraphics = DrawingGraphics.FromImage(measureBitmap);
-        var measured = measureGraphics.MeasureString(renderedText, font, 1024, StringFormatNoWrap);
-        var width = Math.Clamp((int)Math.Ceiling(measured.Width) + 4, 8, 1024);
+        var measured = measureGraphics.MeasureString(renderedText, font, MaxTextMeasureWidth, StringFormatNoWrap);
+        var width = Math.Clamp((int)Math.Ceiling(measured.Width) + 4, 8, MaxUiTextTextureWidth);
         var height = Math.Clamp((int)Math.Ceiling(measured.Height) + 4, 8, 64);
         using var bitmap = new DrawingBitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         using var graphics = DrawingGraphics.FromImage(bitmap);
@@ -88,8 +92,8 @@ public static class TextRenderer
         using var font = CreateJapaneseFont(22, true);
         using var measureBitmap = new DrawingBitmap(1, 1);
         using var measureGraphics = DrawingGraphics.FromImage(measureBitmap);
-        var measured = measureGraphics.MeasureString(text, font, 512, StringFormatNoWrap);
-        var width = Math.Clamp((int)Math.Ceiling(measured.Width) + 18, 48, 220);
+        var measured = measureGraphics.MeasureString(text, font, MaxTextMeasureWidth, StringFormatNoWrap);
+        var width = Math.Clamp((int)Math.Ceiling(measured.Width) + 18, 48, MaxLabelTextTextureWidth);
         var height = Math.Clamp((int)Math.Ceiling(measured.Height) + 10, 30, 72);
         using var bitmap = new DrawingBitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         using var graphics = DrawingGraphics.FromImage(bitmap);
@@ -104,7 +108,7 @@ public static class TextRenderer
         using var font = CreateJapaneseFont(22, true);
         using var measureBitmap = new DrawingBitmap(1, 1);
         using var measureGraphics = DrawingGraphics.FromImage(measureBitmap);
-        return measureGraphics.MeasureString(text, font, 512, StringFormatNoWrap).Width;
+        return measureGraphics.MeasureString(text, font, MaxTextMeasureWidth, StringFormatNoWrap).Width;
     }
 
     public static float MeasureUiTextWidth(string text, float size, bool bold)
@@ -117,7 +121,7 @@ public static class TextRenderer
         using var font = CreateJapaneseFont(size, bold);
         using var measureBitmap = new DrawingBitmap(1, 1);
         using var measureGraphics = DrawingGraphics.FromImage(measureBitmap);
-        return measureGraphics.MeasureString(text, font, 1024, StringFormatNoWrap).Width;
+        return measureGraphics.MeasureString(text, font, MaxTextMeasureWidth, StringFormatNoWrap).Width;
     }
 
     public static float MeasureUiTextCaretOffset(string text, int caretIndex, float size, bool bold)
@@ -135,7 +139,7 @@ public static class TextRenderer
         using var format = (DrawingStringFormat)LeftAlignedStringFormat.Clone();
         format.FormatFlags |= DrawingStringFormatFlags.MeasureTrailingSpaces;
         format.SetMeasurableCharacterRanges(new[] { new System.Drawing.CharacterRange(0, clampedCaretIndex) });
-        using var region = measureGraphics.MeasureCharacterRanges(text, font, new DrawingRectangleF(0, 0, 1024, 64), format)[0];
+        using var region = measureGraphics.MeasureCharacterRanges(text, font, new DrawingRectangleF(0, 0, MaxTextMeasureWidth, 64), format)[0];
         return region.GetBounds(measureGraphics).Right;
     }
 

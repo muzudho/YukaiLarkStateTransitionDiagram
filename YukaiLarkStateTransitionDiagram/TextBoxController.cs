@@ -39,6 +39,8 @@ public sealed class TextBoxController
     /// </summary>
     public string Text { get; private set; } = string.Empty;
 
+    public int MaxLength => _maxLength;
+
     /// <summary>
     /// キャレットの位置を保持します。
     /// </summary>

@@ -28,7 +28,7 @@ public partial class Game1
         {
             if (!_textBoxController.TryInputCharacter(e.Character))
             {
-                _status = "タブ名は24文字までです。";
+                _status = "タブ名は80文字までです。";
             }
             return;
         }
@@ -40,7 +40,7 @@ public partial class Game1
 
         if (!_textBoxController.TryInputCharacter(e.Character))
         {
-            _status = "ラベルは24文字までです。";
+            _status = "ラベルは80文字までです。";
         }
     }
 

@@ -21,6 +21,7 @@ public partial class Game1 : Game
     private const int MiniMapHeight = 118;
     private const int MiniMapRightMargin = 12;
     private const int MiniMapBottomMargin = 64;
+    private const int MaxDiagramTextLength = 80;
     private const int MaxFileNameLength = 255;
     private const float MinCameraZoom = 0.25f;
     private const float MaxCameraZoom = 3.0f;
@@ -44,7 +45,7 @@ public partial class Game1 : Game
     private Texture2D? _yukaiLarkMascotLightThemeTexture;
     private Texture2D? _yukaiLarkMascotDarkThemeTexture;
     private readonly YukaiLarkAssistant _yukaiLarkAssistant = new();
-    private readonly TextBoxController _textBoxController = new(24);
+    private readonly TextBoxController _textBoxController = new(MaxDiagramTextLength);
     private readonly TextBoxController _fileNameTextBoxController = new(MaxFileNameLength);
     private AppConfig _appConfig = new();
 
@@ -233,7 +234,7 @@ public partial class Game1 : Game
         _headerRenderer.DrawHeader(
             GraphicsDevice.Viewport,
             GetHeaderTitle(),
-            _status,
+            GetHeaderStatus(),
             _boardTheme,
             _isEditingFileName,
             _fileNameTextBoxController.GetDisplayText(),
@@ -610,6 +611,16 @@ public partial class Game1 : Game
     }
     private string GetHeaderTitle()
         => _currentFilePath is null ? "未保存のダイアグラム" : Path.GetFileName(_currentFilePath);
+
+    private string GetHeaderStatus()
+    {
+        if (!_isEditingDiagramTabName && !IsEditingLabel)
+        {
+            return _status;
+        }
+
+        return $"{_status}（{_textBoxController.GetDisplayText().Length}／{_textBoxController.MaxLength}）";
+    }
 
     private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
     {
