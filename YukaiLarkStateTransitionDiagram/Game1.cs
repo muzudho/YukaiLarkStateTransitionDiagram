@@ -185,17 +185,17 @@ public partial class Game1 : Game
         else if (_isEditingFileName)
         {
             _fileNameTextBoxController.UpdateImeComposition();
-            HandleFileNameEditingKeyboard(keyboard);
+            HandleFileNameEditingKeyboard(keyboard, gameTime);
         }
         else if (_isEditingDiagramTabName)
         {
             _textBoxController.UpdateImeComposition();
-            HandleDiagramTabNameEditingKeyboard(keyboard);
+            HandleDiagramTabNameEditingKeyboard(keyboard, gameTime);
         }
         else if (IsEditingLabel)
         {
             _textBoxController.UpdateImeComposition();
-            HandleLabelEditingKeyboard(keyboard);
+            HandleLabelEditingKeyboard(keyboard, gameTime);
         }
         else
         {

@@ -207,9 +207,9 @@ public partial class Game1
         }
     }
 
-    private void HandleLabelEditingKeyboard(KeyboardState keyboard)
+    private void HandleLabelEditingKeyboard(KeyboardState keyboard, GameTime gameTime)
     {
-        switch (_textBoxController.HandleKeyboard(keyboard, _previousKeyboard))
+        switch (_textBoxController.HandleKeyboard(keyboard, _previousKeyboard, gameTime))
         {
             case TextBoxKeyboardAction.Commit:
                 CommitLabelEdit();
@@ -220,9 +220,9 @@ public partial class Game1
         }
     }
 
-    private void HandleDiagramTabNameEditingKeyboard(KeyboardState keyboard)
+    private void HandleDiagramTabNameEditingKeyboard(KeyboardState keyboard, GameTime gameTime)
     {
-        switch (_textBoxController.HandleKeyboard(keyboard, _previousKeyboard))
+        switch (_textBoxController.HandleKeyboard(keyboard, _previousKeyboard, gameTime))
         {
             case TextBoxKeyboardAction.Commit:
                 CommitDiagramTabNameEdit();
@@ -306,9 +306,9 @@ public partial class Game1
         _status = "ラベル編集をキャンセルしました。";
     }
 
-    private void HandleFileNameEditingKeyboard(KeyboardState keyboard)
+    private void HandleFileNameEditingKeyboard(KeyboardState keyboard, GameTime gameTime)
     {
-        switch (_fileNameTextBoxController.HandleKeyboard(keyboard, _previousKeyboard))
+        switch (_fileNameTextBoxController.HandleKeyboard(keyboard, _previousKeyboard, gameTime))
         {
             case TextBoxKeyboardAction.Commit:
                 CommitFileNameEdit();

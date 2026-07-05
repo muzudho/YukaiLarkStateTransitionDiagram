@@ -1,6 +1,7 @@
 namespace YukaiLarkStateTransitionDiagram;
 
 using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
 /// <summary>
@@ -8,10 +9,16 @@ using Microsoft.Xna.Framework.Input;
 /// </summary>
 public sealed class TextBoxController
 {
+    private const double CaretKeyRepeatInitialDelaySeconds = 0.42d;
+    private const double CaretKeyRepeatIntervalSeconds = 0.055d;
+
     /// <summary>
     /// テキストボックスに入力できる最大文字数を保持します。
     /// </summary>
     private readonly int _maxLength;
+
+    private double _leftKeyRepeatCountdown = CaretKeyRepeatInitialDelaySeconds;
+    private double _rightKeyRepeatCountdown = CaretKeyRepeatInitialDelaySeconds;
 
     /// <summary>
     /// IME の確定前の文字列を保持します。
@@ -51,6 +58,7 @@ public sealed class TextBoxController
         Text = text;
         CaretIndex = Text.Length;
         _compositionText = string.Empty;
+        ResetCaretKeyRepeat();
     }
 
     /// <summary>
@@ -61,6 +69,7 @@ public sealed class TextBoxController
         Text = string.Empty;
         CaretIndex = 0;
         _compositionText = string.Empty;
+        ResetCaretKeyRepeat();
     }
 
     /// <summary>
@@ -114,11 +123,13 @@ public sealed class TextBoxController
     /// </summary>
     /// <param name="keyboard">現在のキーボード状態</param>
     /// <param name="previousKeyboard">前回のキーボード状態</param>
+    /// <param name="gameTime">前回更新からの経過時間</param>
     /// <returns>キーボード入力の結果を表すアクション</returns>
-    public TextBoxKeyboardAction HandleKeyboard(KeyboardState keyboard, KeyboardState previousKeyboard)
+    public TextBoxKeyboardAction HandleKeyboard(KeyboardState keyboard, KeyboardState previousKeyboard, GameTime gameTime)
     {
         if (HasComposition)
         {
+            ResetCaretKeyRepeat();
             return TextBoxKeyboardAction.None;
         }
 
@@ -132,12 +143,12 @@ public sealed class TextBoxController
             return TextBoxKeyboardAction.Cancel;
         }
 
-        if (IsNewKeyPress(keyboard, previousKeyboard, Keys.Left) && CaretIndex > 0)
+        if (ShouldHandleRepeatedKey(keyboard, previousKeyboard, Keys.Left, ref _leftKeyRepeatCountdown, gameTime) && CaretIndex > 0)
         {
             CaretIndex--;
         }
 
-        if (IsNewKeyPress(keyboard, previousKeyboard, Keys.Right) && CaretIndex < Text.Length)
+        if (ShouldHandleRepeatedKey(keyboard, previousKeyboard, Keys.Right, ref _rightKeyRepeatCountdown, gameTime) && CaretIndex < Text.Length)
         {
             CaretIndex++;
         }
@@ -185,6 +196,46 @@ public sealed class TextBoxController
 
     private static bool IsNewKeyPress(KeyboardState keyboard, KeyboardState previousKeyboard, Keys key)
         => keyboard.IsKeyDown(key) && previousKeyboard.IsKeyUp(key);
+
+    private static bool ShouldHandleRepeatedKey(
+        KeyboardState keyboard,
+        KeyboardState previousKeyboard,
+        Keys key,
+        ref double repeatCountdown,
+        GameTime gameTime)
+    {
+        if (keyboard.IsKeyUp(key))
+        {
+            repeatCountdown = CaretKeyRepeatInitialDelaySeconds;
+            return false;
+        }
+
+        if (previousKeyboard.IsKeyUp(key))
+        {
+            repeatCountdown = CaretKeyRepeatInitialDelaySeconds;
+            return true;
+        }
+
+        repeatCountdown -= gameTime.ElapsedGameTime.TotalSeconds;
+        if (repeatCountdown > 0d)
+        {
+            return false;
+        }
+
+        repeatCountdown += CaretKeyRepeatIntervalSeconds;
+        if (repeatCountdown <= 0d)
+        {
+            repeatCountdown = CaretKeyRepeatIntervalSeconds;
+        }
+
+        return true;
+    }
+
+    private void ResetCaretKeyRepeat()
+    {
+        _leftKeyRepeatCountdown = CaretKeyRepeatInitialDelaySeconds;
+        _rightKeyRepeatCountdown = CaretKeyRepeatInitialDelaySeconds;
+    }
 }
 
 /// <summary>
