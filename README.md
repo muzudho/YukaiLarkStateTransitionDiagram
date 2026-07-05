@@ -10,9 +10,13 @@
 <img src="YukaiLarkStateTransitionDiagram/Assets\BrandLogo/yukai-lark-app-icon.png" alt="ユカイラーク" width="96"></img>  
 👆　ユカイラークという鳥のアシスタントが、ツールの使い方を説明します。  
 
-![サンプル画面](YukaiLarkStateTransitionDiagram/Assets/Screenshots/スクリーンショット-2026-06-28-163018-v100.png)  
+![サンプル画面１](YukaiLarkStateTransitionDiagram/Assets/Screenshots/スクリーンショット-2026-06-28-163018-v100.png)  
 
 👆　スクリーンショット 2026-06-28 16:30 [v1.0.0]  
+
+![サンプル画面２](RepositoryAssets/Screenshots/スクリーンショット-2026-07-05 221245-v202スクリーンショット.png)  
+
+👆　スクリーンショット 2026-07-05 22:12 [v2.0.2]  
 
 
 ## ダウンロード
