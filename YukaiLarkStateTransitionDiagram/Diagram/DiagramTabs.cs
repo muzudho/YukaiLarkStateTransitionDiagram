@@ -158,7 +158,7 @@ public partial class Game1
         var itemIndex = SubstateBreadcrumbRenderer.GetBreadcrumbItemIndexAt(viewport, path, mouse.Position);
         if (itemIndex < 0 || itemIndex >= path.Count)
         {
-            return true;
+            return false;
         }
 
         var diagramId = path[itemIndex].DiagramId;
@@ -177,6 +177,18 @@ public partial class Game1
 
         SelectDiagramTab(diagramIndex);
         return true;
+    }
+
+    private bool IsMouseOverSubstateBreadcrumbItem(Point position)
+    {
+        var viewport = GraphicsDevice.Viewport;
+        if (!SubstateBreadcrumbRenderer.GetBreadcrumbBounds(viewport).Contains(position))
+        {
+            return false;
+        }
+
+        var path = BuildSubstateBreadcrumbPath();
+        return SubstateBreadcrumbRenderer.GetBreadcrumbItemIndexAt(viewport, path, position) >= 0;
     }
 
     private void EnterSelectedNodeSubstate()

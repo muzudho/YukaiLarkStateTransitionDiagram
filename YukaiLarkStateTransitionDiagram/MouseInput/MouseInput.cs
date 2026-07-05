@@ -351,7 +351,7 @@ public partial class Game1
         if (GetThemeButtonRectangle(viewport).Contains(screenPosition)
             || HeaderRenderer.GetTitleHitBounds(viewport).Contains(screenPosition)
             || DiagramTabRenderer.GetTabBarBounds(viewport).Contains(screenPosition)
-            || SubstateBreadcrumbRenderer.GetBreadcrumbBounds(viewport).Contains(screenPosition)
+            || IsMouseOverSubstateBreadcrumbItem(screenPosition)
             || IsMouseOverMiniMap(screenPosition)
             || IsMouseOverInspectorPanel(screenPosition))
         {
@@ -702,7 +702,7 @@ public partial class Game1
 
         if (IsMouseOverMiniMap(mouse)
             || DiagramTabRenderer.GetTabBarBounds(GraphicsDevice.Viewport).Contains(mouse.Position)
-            || SubstateBreadcrumbRenderer.GetBreadcrumbBounds(GraphicsDevice.Viewport).Contains(mouse.Position)
+            || IsMouseOverSubstateBreadcrumbItem(mouse.Position)
             || CanPanFromMousePosition(keyboard, mouse))
         {
             return MouseCursor.Hand;

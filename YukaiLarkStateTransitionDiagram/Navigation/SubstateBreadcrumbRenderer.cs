@@ -25,7 +25,6 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
     private const int ButtonGap = 6;
     private const int TextY = BreadcrumbTop + 7;
     private const float TextSize = 14f;
-    private const string PrefixText = "現在位置:";
     private const string SeparatorText = ">";
 
     private readonly GraphicsDevice _graphicsDevice;
@@ -50,19 +49,15 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         _uiTextTextureCache.Clear();
     }
 
-    public void DrawBreadcrumb(Viewport viewport, IReadOnlyList<SubstateBreadcrumbItem> path, BoardTheme theme)
+    public void DrawBreadcrumb(Viewport viewport, IReadOnlyList<SubstateBreadcrumbItem> path, BoardTheme theme, Point mousePosition)
     {
         if (viewport.Width < MinimumVisibleWidth || path.Count == 0)
         {
             return;
         }
 
-        var bounds = GetBreadcrumbBounds(viewport);
-        _spriteBatch.Draw(_pixel, bounds, theme.HeaderBackgroundColor * 0.88f);
-        _spriteBatch.Draw(_pixel, new Rectangle(0, bounds.Bottom - 1, viewport.Width, 1), theme.HeaderBorderColor);
-
         var entries = BuildVisibleEntries(path, viewport.Width - HorizontalPadding * 2);
-        var x = DrawUiText(PrefixText, new Vector2(HorizontalPadding, TextY), theme.HeaderStatusTextColor, TextSize, false) + ButtonGap;
+        var x = (float)HorizontalPadding;
         for (var i = 0; i < entries.Count; i++)
         {
             if (i > 0)
@@ -75,24 +70,16 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
             var textWidth = TextRenderer.MeasureUiTextWidth(entry.Label, TextSize, textBold);
             if (entry.SourceIndex.HasValue)
             {
-                var item = path[entry.SourceIndex.Value];
                 var buttonBounds = new Rectangle(
                     (int)MathF.Round(x),
                     ButtonTop,
                     (int)MathF.Ceiling(textWidth) + ButtonPaddingX * 2,
                     ButtonHeight);
-                var buttonColor = item.IsCurrent
-                    ? theme.SelectedTransitionLineColor * 0.08f
-                    : theme.HeaderBorderColor * 0.20f;
-                var borderColor = item.IsCurrent
-                    ? theme.SelectedTransitionLineColor * 0.42f
-                    : theme.HeaderBorderColor * 0.70f;
-
-                _spriteBatch.Draw(_pixel, buttonBounds, buttonColor);
-                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.X, buttonBounds.Y, buttonBounds.Width, 1), borderColor);
-                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.X, buttonBounds.Bottom - 1, buttonBounds.Width, 1), borderColor);
-                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.X, buttonBounds.Y, 1, buttonBounds.Height), borderColor);
-                _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.Right - 1, buttonBounds.Y, 1, buttonBounds.Height), borderColor);
+                if (buttonBounds.Contains(mousePosition))
+                {
+                    _spriteBatch.Draw(_pixel, buttonBounds, theme.HeaderBorderColor * 0.20f);
+                    DrawRectangleOutline(buttonBounds, theme.HeaderBorderColor * 0.70f);
+                }
 
                 DrawUiText(entry.Label, new Vector2(buttonBounds.X + ButtonPaddingX, TextY), theme.HeaderTitleTextColor, TextSize, textBold);
                 x = buttonBounds.Right + ButtonGap;
@@ -121,7 +108,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         }
 
         var entries = BuildVisibleEntries(path, viewport.Width - HorizontalPadding * 2);
-        var x = HorizontalPadding + TextRenderer.MeasureUiTextWidth(PrefixText, TextSize, false) + ButtonGap;
+        var x = (float)HorizontalPadding;
         for (var i = 0; i < entries.Count; i++)
         {
             if (i > 0)
@@ -179,7 +166,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
 
     private static float MeasureEntriesWidth(IReadOnlyList<BreadcrumbEntry> entries)
     {
-        var width = TextRenderer.MeasureUiTextWidth(PrefixText, TextSize, false) + ButtonGap;
+        var width = 0f;
         for (var i = 0; i < entries.Count; i++)
         {
             if (i > 0)
@@ -218,6 +205,14 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         var texture = TextRenderer.CreateUiTextTexture(_graphicsDevice, text, size, bold);
         _uiTextTextureCache[cacheKey] = texture;
         return texture;
+    }
+
+    private void DrawRectangleOutline(Rectangle rectangle, Color color)
+    {
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X, rectangle.Y, rectangle.Width, 1), color);
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X, rectangle.Bottom - 1, rectangle.Width, 1), color);
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.X, rectangle.Y, 1, rectangle.Height), color);
+        _spriteBatch.Draw(_pixel, new Rectangle(rectangle.Right - 1, rectangle.Y, 1, rectangle.Height), color);
     }
 
     private sealed record BreadcrumbEntry(string Label, int? SourceIndex, bool IsCurrent);

@@ -253,7 +253,8 @@ public partial class Game1 : Game
         _substateBreadcrumbRenderer.DrawBreadcrumb(
             GraphicsDevice.Viewport,
             BuildSubstateBreadcrumbPath(),
-            _boardTheme);
+            _boardTheme,
+            Mouse.GetState().Position);
 
         // ［開始マーク作成アシスト］の描画
         DrawYukaiLarkMascot(GraphicsDevice.Viewport, gameTime.TotalGameTime);
