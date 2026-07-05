@@ -71,7 +71,8 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
             }
 
             var entry = entries[i];
-            var textWidth = TextRenderer.MeasureUiTextWidth(entry.Label, TextSize, false);
+            var textBold = entry.IsCurrent;
+            var textWidth = TextRenderer.MeasureUiTextWidth(entry.Label, TextSize, textBold);
             if (entry.SourceIndex.HasValue)
             {
                 var item = path[entry.SourceIndex.Value];
@@ -81,10 +82,10 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
                     (int)MathF.Ceiling(textWidth) + ButtonPaddingX * 2,
                     ButtonHeight);
                 var buttonColor = item.IsCurrent
-                    ? theme.SelectedTransitionLineColor * 0.22f
+                    ? theme.SelectedTransitionLineColor * 0.08f
                     : theme.HeaderBorderColor * 0.20f;
                 var borderColor = item.IsCurrent
-                    ? theme.SelectedTransitionLineColor * 0.80f
+                    ? theme.SelectedTransitionLineColor * 0.42f
                     : theme.HeaderBorderColor * 0.70f;
 
                 _spriteBatch.Draw(_pixel, buttonBounds, buttonColor);
@@ -93,7 +94,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
                 _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.X, buttonBounds.Y, 1, buttonBounds.Height), borderColor);
                 _spriteBatch.Draw(_pixel, new Rectangle(buttonBounds.Right - 1, buttonBounds.Y, 1, buttonBounds.Height), borderColor);
 
-                DrawUiText(entry.Label, new Vector2(buttonBounds.X + ButtonPaddingX, TextY), theme.HeaderTitleTextColor, TextSize, false);
+                DrawUiText(entry.Label, new Vector2(buttonBounds.X + ButtonPaddingX, TextY), theme.HeaderTitleTextColor, TextSize, textBold);
                 x = buttonBounds.Right + ButtonGap;
                 continue;
             }
@@ -129,7 +130,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
             }
 
             var entry = entries[i];
-            var textWidth = TextRenderer.MeasureUiTextWidth(entry.Label, TextSize, false);
+            var textWidth = TextRenderer.MeasureUiTextWidth(entry.Label, TextSize, entry.IsCurrent);
             if (entry.SourceIndex.HasValue)
             {
                 var buttonBounds = new Rectangle(
@@ -155,7 +156,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
     private static List<BreadcrumbEntry> BuildVisibleEntries(IReadOnlyList<SubstateBreadcrumbItem> path, int maxWidth)
     {
         var normalized = path
-            .Select((item, index) => new BreadcrumbEntry(NormalizeLabel(item.Label), index))
+            .Select((item, index) => new BreadcrumbEntry(NormalizeLabel(item.Label), index, item.IsCurrent))
             .ToList();
 
         if (MeasureEntriesWidth(normalized) <= maxWidth || normalized.Count <= 2)
@@ -165,7 +166,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
 
         for (var firstVisibleTail = 2; firstVisibleTail < normalized.Count; firstVisibleTail++)
         {
-            var shortened = new List<BreadcrumbEntry> { normalized[0], new("...", null) };
+            var shortened = new List<BreadcrumbEntry> { normalized[0], new("...", null, false) };
             shortened.AddRange(normalized.Skip(firstVisibleTail));
             if (MeasureEntriesWidth(shortened) <= maxWidth)
             {
@@ -173,7 +174,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
             }
         }
 
-        return new List<BreadcrumbEntry> { new("...", null), normalized[^1] };
+        return new List<BreadcrumbEntry> { new("...", null, false), normalized[^1] };
     }
 
     private static float MeasureEntriesWidth(IReadOnlyList<BreadcrumbEntry> entries)
@@ -186,7 +187,7 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
                 width += TextRenderer.MeasureUiTextWidth(SeparatorText, TextSize, false) + ButtonGap;
             }
 
-            var textWidth = TextRenderer.MeasureUiTextWidth(entries[i].Label, TextSize, false);
+            var textWidth = TextRenderer.MeasureUiTextWidth(entries[i].Label, TextSize, entries[i].IsCurrent);
             width += entries[i].SourceIndex.HasValue
                 ? textWidth + ButtonPaddingX * 2
                 : textWidth;
@@ -219,5 +220,5 @@ public sealed class SubstateBreadcrumbRenderer : IDisposable
         return texture;
     }
 
-    private sealed record BreadcrumbEntry(string Label, int? SourceIndex);
+    private sealed record BreadcrumbEntry(string Label, int? SourceIndex, bool IsCurrent);
 }
