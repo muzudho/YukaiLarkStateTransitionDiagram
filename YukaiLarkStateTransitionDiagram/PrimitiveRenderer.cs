@@ -62,6 +62,35 @@ public sealed class PrimitiveRenderer
         => _spriteBatch.Draw(_pixel, rectangle, color);
 
     /// <summary>
+    /// テキストボックスの文字数を表す数を描画するための矩形を描く。
+    /// </summary>
+    /// <param name="rectangle"></param>
+    /// <param name="radius"></param>
+    /// <param name="color"></param>
+    public void DrawRoundedPixelRectangle(Rectangle rectangle, int radius, Color color)
+    {
+        if (rectangle.Width <= 0 || rectangle.Height <= 0)
+        {
+            return;
+        }
+
+        var clampedRadius = Math.Min(radius, Math.Min(rectangle.Width, rectangle.Height) / 2);
+        if (clampedRadius <= 0)
+        {
+            DrawPixelRectangle(rectangle, color);
+            return;
+        }
+
+        DrawPixelRectangle(new Rectangle(rectangle.X + clampedRadius, rectangle.Y, rectangle.Width - (clampedRadius * 2), rectangle.Height), color);
+        DrawPixelRectangle(new Rectangle(rectangle.X, rectangle.Y + clampedRadius, clampedRadius, rectangle.Height - (clampedRadius * 2)), color);
+        DrawPixelRectangle(new Rectangle(rectangle.Right - clampedRadius, rectangle.Y + clampedRadius, clampedRadius, rectangle.Height - (clampedRadius * 2)), color);
+        DrawCircle(new Vector2(rectangle.X + clampedRadius, rectangle.Y + clampedRadius), clampedRadius, color);
+        DrawCircle(new Vector2(rectangle.Right - clampedRadius - 1, rectangle.Y + clampedRadius), clampedRadius, color);
+        DrawCircle(new Vector2(rectangle.X + clampedRadius, rectangle.Bottom - clampedRadius - 1), clampedRadius, color);
+        DrawCircle(new Vector2(rectangle.Right - clampedRadius - 1, rectangle.Bottom - clampedRadius - 1), clampedRadius, color);
+    }
+
+    /// <summary>
     /// 円を描く。
     /// </summary>
     /// <param name="center">円の中心点</param>

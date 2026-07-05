@@ -277,6 +277,7 @@ public partial class Game1 : Game
         {
             DrawBottomShortcutHelp(gameTime);
         }
+        DrawTextBoxCharacterCounter();
         _spriteBatch.End();
         base.Draw(gameTime);
     }
@@ -614,12 +615,128 @@ public partial class Game1 : Game
 
     private string GetHeaderStatus()
     {
+        return _status;
+    }
+
+    private void DrawTextBoxCharacterCounter()
+    {
         if (!_isEditingDiagramTabName && !IsEditingLabel)
         {
-            return _status;
+            return;
         }
 
-        return $"{_status}（{_textBoxController.GetDisplayText().Length}／{_textBoxController.MaxLength}）";
+        if (!TryGetActiveTextBoxScreenBounds(out var bounds))
+        {
+            return;
+        }
+
+        var counterText = $"（{_textBoxController.GetDisplayText().Length}／{_textBoxController.MaxLength}）";
+        var texture = GetUiTextTexture(counterText, 13, true);
+        const int horizontalPadding = 6;
+        const int verticalPadding = 3;
+        const int offset = 4;
+        var backgroundWidth = texture.Width + (horizontalPadding * 2);
+        var backgroundHeight = texture.Height + (verticalPadding * 2);
+        var viewport = GraphicsDevice.Viewport;
+        var maxX = Math.Max(4, viewport.Width - backgroundWidth - 4);
+        var maxY = Math.Max(4, viewport.Height - backgroundHeight - 4);
+        var x = bounds.Right + offset;
+        var y = bounds.Bottom + offset;
+        if (x > maxX)
+        {
+            x = bounds.Right - backgroundWidth;
+        }
+        if (y > maxY)
+        {
+            y = bounds.Top - backgroundHeight - offset;
+        }
+
+        x = Math.Clamp(x, 4, maxX);
+        y = Math.Clamp(y, 4, maxY);
+        var background = new Rectangle(x, y, backgroundWidth, backgroundHeight);
+
+        _primitiveRenderer.DrawRoundedPixelRectangle(background, 6, Color.Black * 0.56f);
+        _spriteBatch.Draw(texture, new Vector2(background.X + horizontalPadding, background.Y + verticalPadding), Color.White * 0.92f);
+    }
+
+    private bool TryGetActiveTextBoxScreenBounds(out Rectangle bounds)
+    {
+        if (_isEditingDiagramTabName)
+        {
+            var tabBounds = DiagramTabRenderer.GetTabBounds(GraphicsDevice.Viewport, _diagrams, _currentDiagramIndex);
+            if (tabBounds == Rectangle.Empty)
+            {
+                bounds = Rectangle.Empty;
+                return false;
+            }
+
+            bounds = new Rectangle(tabBounds.X + 5, tabBounds.Y + 4, tabBounds.Width - 34, tabBounds.Height - 8);
+            return bounds.Width >= 42;
+        }
+
+        if (!TryGetEditingLabelWorldBounds(out var worldPosition, out var worldSize))
+        {
+            bounds = Rectangle.Empty;
+            return false;
+        }
+
+        var screenPosition = WorldToScreen(worldPosition);
+        var screenSize = worldSize * _cameraZoom;
+        bounds = new Rectangle(
+            (int)MathF.Round(screenPosition.X),
+            (int)MathF.Round(screenPosition.Y),
+            Math.Max(1, (int)MathF.Round(screenSize.X)),
+            Math.Max(1, (int)MathF.Round(screenSize.Y)));
+        return true;
+    }
+
+    private bool TryGetEditingLabelWorldBounds(out Vector2 position, out Vector2 size)
+    {
+        var editingLabel = GetEditingDisplayLabel();
+        if (_editingNode is not null)
+        {
+            var texture = GetLabelTexture(editingLabel, true);
+            size = new Vector2(texture.Width, texture.Height);
+            position = _editingNode.Position - (size / 2f);
+            return true;
+        }
+
+        if (_editingTransition is not null)
+        {
+            var displayLabel = string.IsNullOrEmpty(editingLabel) ? "イベント名" : editingLabel;
+            var texture = GetLabelTexture(displayLabel, true);
+            Vector2 center;
+            if (_editingTransition.Waypoints.Count > 0)
+            {
+                if (!TryGetTransitionPath(_editingTransition, out var points))
+                {
+                    position = Vector2.Zero;
+                    size = Vector2.Zero;
+                    return false;
+                }
+
+                center = GetTransitionPathLabelCenter(points, _editingTransition, texture.Width, texture.Height);
+            }
+            else
+            {
+                if (!TryGetTransitionGeometry(_editingTransition, out var start, out var control1, out var control2, out var end))
+                {
+                    position = Vector2.Zero;
+                    size = Vector2.Zero;
+                    return false;
+                }
+
+                center = EdgeRenderer.GetTransitionLabelCenter(start, control1, control2, end, _editingTransition, texture.Width, texture.Height);
+            }
+
+            size = new Vector2(texture.Width, texture.Height);
+            position = center - (size / 2f);
+            return true;
+        }
+
+        position = Vector2.Zero;
+        size = Vector2.Zero;
+        return false;
     }
 
     private float DrawUiText(string text, Vector2 position, Color color, float size, bool bold)
