@@ -24,6 +24,10 @@ public static class TextRenderer
     private const int MaxTextMeasureWidth = 4096;
     private const int MaxUiTextTextureWidth = 4096;
     private const int MaxLabelTextTextureWidth = 2400;
+    /// <summary>
+    /// テキストの折り返しの最大高さを取得する。
+    /// </summary>
+    private const int MaxLabelTextTextureHeight = 512;
 
     /// <summary>
     /// 文字列を描画してテクスチャを作成する。
@@ -92,9 +96,9 @@ public static class TextRenderer
         using var font = CreateJapaneseFont(22, true);
         using var measureBitmap = new DrawingBitmap(1, 1);
         using var measureGraphics = DrawingGraphics.FromImage(measureBitmap);
-        var measured = measureGraphics.MeasureString(text, font, MaxTextMeasureWidth, StringFormatNoWrap);
+        var measured = MeasureLabelText(measureGraphics, font, text);
         var width = Math.Clamp((int)Math.Ceiling(measured.Width) + 18, 48, MaxLabelTextTextureWidth);
-        var height = Math.Clamp((int)Math.Ceiling(measured.Height) + 10, 30, 72);
+        var height = Math.Clamp((int)Math.Ceiling(measured.Height) + 10, 30, MaxLabelTextTextureHeight);
         using var bitmap = new DrawingBitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         using var graphics = DrawingGraphics.FromImage(bitmap);
         graphics.Clear(DrawingColor.Transparent);
@@ -108,7 +112,19 @@ public static class TextRenderer
         using var font = CreateJapaneseFont(22, true);
         using var measureBitmap = new DrawingBitmap(1, 1);
         using var measureGraphics = DrawingGraphics.FromImage(measureBitmap);
-        return measureGraphics.MeasureString(text, font, MaxTextMeasureWidth, StringFormatNoWrap).Width;
+        return MeasureLabelText(measureGraphics, font, text).Width;
+    }
+
+    /// <summary>
+    /// テキストの折り返しの計算に使う。
+    /// </summary>
+    /// <returns></returns>
+    public static float MeasureLabelLineHeight()
+    {
+        using var font = CreateJapaneseFont(22, true);
+        using var measureBitmap = new DrawingBitmap(1, 1);
+        using var measureGraphics = DrawingGraphics.FromImage(measureBitmap);
+        return measureGraphics.MeasureString("あ", font, MaxTextMeasureWidth, StringFormatNoWrap).Height;
     }
 
     public static float MeasureUiTextWidth(string text, float size, bool bold)
@@ -201,4 +217,26 @@ public static class TextRenderer
     /// <returns>プリマルチプライ後の色成分</returns>
     private static byte Premultiply(byte color, byte alpha)
         => (byte)((color * alpha + 127) / 255);
+
+    /// <summary>
+    /// テキストの折り返しの計算に使う。
+    /// </summary>
+    /// <param name="graphics"></param>
+    /// <param name="font"></param>
+    /// <param name="text"></param>
+    /// <returns></returns>
+    private static System.Drawing.SizeF MeasureLabelText(DrawingGraphics graphics, DrawingFont font, string text)
+    {
+        var normalized = text.Replace("\r\n", "\n").Replace('\r', '\n');
+        var lines = normalized.Split('\n');
+        var lineHeight = graphics.MeasureString("あ", font, MaxTextMeasureWidth, StringFormatNoWrap).Height;
+        var width = 0f;
+        foreach (var line in lines)
+        {
+            var measuredLine = graphics.MeasureString(string.IsNullOrEmpty(line) ? " " : line, font, MaxTextMeasureWidth, StringFormatNoWrap);
+            width = MathF.Max(width, measuredLine.Width);
+        }
+
+        return new System.Drawing.SizeF(width, lineHeight * Math.Max(1, lines.Length));
+    }
 }

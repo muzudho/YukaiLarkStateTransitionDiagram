@@ -1,6 +1,7 @@
 namespace YukaiLarkStateTransitionDiagram;
 
 using System;
+using System.Collections.Generic;
 using YukaiLarkStateTransitionDiagram.Theme;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -13,6 +14,11 @@ public sealed class NodeRenderer
     private readonly PrimitiveRenderer _primitiveRenderer;
     private readonly SpriteBatch _spriteBatch;
     private readonly Func<string, bool, Texture2D> _getLabelTexture;
+
+    /// <summary>
+    /// テキストの折り返しに使用。
+    /// </summary>
+    private readonly Dictionary<string, string> _wrappedNormalNodeLabelCache = new();
 
     public BoardTheme Theme { get; set; }
 
@@ -120,7 +126,7 @@ public sealed class NodeRenderer
         }
         else
         {
-            DrawNodeLabel(node.Label, node.Position, editing: false, labelColor);
+            DrawNodeLabel(GetDisplayNodeLabel(node), node.Position, editing: false, labelColor);
         }
     }
 
@@ -153,7 +159,7 @@ public sealed class NodeRenderer
         _primitiveRenderer.DrawCircle(node.Position, node.Radius + 4f, Theme.NodeGhostInnerHaloColor * (alpha * 0.3f));
         _primitiveRenderer.DrawCircle(node.Position, node.Radius, fill * (alpha * 0.54f));
         _primitiveRenderer.DrawCircleOutline(node.Position, node.Radius, Theme.NormalNodeOutlineColor * (alpha * 0.72f), 3f);
-        DrawNodeLabel(node.Label, node.Position, editing: false, GetNodeLabelColor(fill, inactive: false) * (alpha * 0.78f));
+        DrawNodeLabel(GetDisplayNodeLabel(node), node.Position, editing: false, GetNodeLabelColor(fill, inactive: false) * (alpha * 0.78f));
     }
 
     public void DrawStateNodeLabelEditGhost(DiagramNode node, TimeSpan totalGameTime)
@@ -317,6 +323,159 @@ public sealed class NodeRenderer
         var top = texturePosition.Y + 6f;
         var bottom = texturePosition.Y + texture.Height - 6f;
         _primitiveRenderer.DrawLine(new Vector2(x, top), new Vector2(x, bottom), color, 2f);
+    }
+
+    private string GetDisplayNodeLabel(DiagramNode node)
+    {
+        if (node.Kind != NodeKind.Normal)
+        {
+            return node.Label;
+        }
+
+        var cacheKey = $"{node.Radius:0.###}|{node.Label}";
+        if (_wrappedNormalNodeLabelCache.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
+        var wrapped = WrapNormalNodeLabelForCircle(node.Label, node.Radius);
+        _wrappedNormalNodeLabelCache[cacheKey] = wrapped;
+        return wrapped;
+    }
+
+    private static string WrapNormalNodeLabelForCircle(string label, float radius)
+    {
+        if (string.IsNullOrEmpty(label) || label.Contains('\n') || DoesLabelFitCircle(new[] { label }, radius))
+        {
+            return label;
+        }
+
+        var characters = SplitLabelCharacters(label);
+        var maxLineCount = Math.Min(characters.Count, GetMaxLabelLineCount(radius));
+        for (var lineCount = 2; lineCount <= maxLineCount; lineCount++)
+        {
+            var lines = BuildBalancedLines(characters, lineCount);
+            if (DoesLabelFitCircle(lines, radius))
+            {
+                return string.Join('\n', lines);
+            }
+        }
+
+        return string.Join('\n', BuildBalancedLines(characters, maxLineCount));
+    }
+
+    private static List<string> SplitLabelCharacters(string label)
+    {
+        var characters = new List<string>(label.Length);
+        foreach (var character in label)
+        {
+            characters.Add(character.ToString());
+        }
+
+        return characters;
+    }
+
+    private static int GetMaxLabelLineCount(float radius)
+    {
+        var lineHeight = TextRenderer.MeasureLabelLineHeight();
+        var innerDiameter = MathF.Max(16f, (radius - 10f) * 2f);
+        return Math.Max(1, Math.Min(8, (int)MathF.Floor((innerDiameter - 10f) / lineHeight)));
+    }
+
+    private static IReadOnlyList<string> BuildBalancedLines(IReadOnlyList<string> characters, int lineCount)
+    {
+        var count = characters.Count;
+        var widths = new float[count + 1, count + 1];
+        for (var start = 0; start < count; start++)
+        {
+            var text = string.Empty;
+            for (var end = start + 1; end <= count; end++)
+            {
+                text += characters[end - 1];
+                widths[start, end] = TextRenderer.MeasureLabelTextWidth(text);
+            }
+        }
+
+        var dp = new float[lineCount + 1, count + 1];
+        var previousBreak = new int[lineCount + 1, count + 1];
+        for (var lines = 0; lines <= lineCount; lines++)
+        {
+            for (var end = 0; end <= count; end++)
+            {
+                dp[lines, end] = float.PositiveInfinity;
+                previousBreak[lines, end] = -1;
+            }
+        }
+
+        dp[0, 0] = 0f;
+        for (var lines = 1; lines <= lineCount; lines++)
+        {
+            for (var end = lines; end <= count; end++)
+            {
+                for (var start = lines - 1; start < end; start++)
+                {
+                    var score = MathF.Max(dp[lines - 1, start], widths[start, end]);
+                    if (score >= dp[lines, end])
+                    {
+                        continue;
+                    }
+
+                    dp[lines, end] = score;
+                    previousBreak[lines, end] = start;
+                }
+            }
+        }
+
+        var result = new string[lineCount];
+        var lineEnd = count;
+        for (var line = lineCount; line >= 1; line--)
+        {
+            var lineStart = previousBreak[line, lineEnd];
+            if (lineStart < 0)
+            {
+                lineStart = line - 1;
+            }
+
+            result[line - 1] = ConcatRange(characters, lineStart, lineEnd);
+            lineEnd = lineStart;
+        }
+
+        return result;
+    }
+
+    private static string ConcatRange(IReadOnlyList<string> characters, int start, int end)
+    {
+        var text = string.Empty;
+        for (var i = start; i < end; i++)
+        {
+            text += characters[i];
+        }
+
+        return text;
+    }
+
+    private static bool DoesLabelFitCircle(IReadOnlyList<string> lines, float radius)
+    {
+        var innerRadius = MathF.Max(8f, radius - 10f);
+        var lineHeight = TextRenderer.MeasureLabelLineHeight();
+        var totalTextHeight = lineHeight * lines.Count;
+        if (totalTextHeight > innerRadius * 2f)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var y = ((i + 0.5f) * lineHeight) - (totalTextHeight / 2f);
+            var halfChord = MathF.Sqrt(MathF.Max(0f, (innerRadius * innerRadius) - (y * y)));
+            var allowedWidth = (halfChord * 2f) - 10f;
+            if (TextRenderer.MeasureLabelTextWidth(lines[i]) > allowedWidth)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 
