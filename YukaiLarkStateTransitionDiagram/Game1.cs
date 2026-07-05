@@ -186,16 +186,28 @@ public partial class Game1 : Game
         {
             _fileNameTextBoxController.UpdateImeComposition();
             HandleFileNameEditingKeyboard(keyboard, gameTime);
+            if (_isEditingFileName)
+            {
+                HandleTextEditingMouse(mouse);
+            }
         }
         else if (_isEditingDiagramTabName)
         {
             _textBoxController.UpdateImeComposition();
             HandleDiagramTabNameEditingKeyboard(keyboard, gameTime);
+            if (_isEditingDiagramTabName)
+            {
+                HandleTextEditingMouse(mouse);
+            }
         }
         else if (IsEditingLabel)
         {
             _textBoxController.UpdateImeComposition();
             HandleLabelEditingKeyboard(keyboard, gameTime);
+            if (IsEditingLabel)
+            {
+                HandleTextEditingMouse(mouse);
+            }
         }
         else
         {

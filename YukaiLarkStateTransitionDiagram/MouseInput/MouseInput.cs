@@ -318,6 +318,64 @@ public partial class Game1
             }
         }
     }
+
+    private void HandleTextEditingMouse(MouseState mouse)
+    {
+        var leftPressed = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released;
+        if (!leftPressed || !IsBlankCanvasClick(mouse.Position))
+        {
+            return;
+        }
+
+        if (_isEditingFileName)
+        {
+            CancelFileNameEdit();
+            return;
+        }
+
+        if (_isEditingDiagramTabName)
+        {
+            CancelDiagramTabNameEdit();
+            return;
+        }
+
+        if (IsEditingLabel)
+        {
+            CancelLabelEdit();
+        }
+    }
+
+    private bool IsBlankCanvasClick(Point screenPosition)
+    {
+        var viewport = GraphicsDevice.Viewport;
+        if (GetThemeButtonRectangle(viewport).Contains(screenPosition)
+            || HeaderRenderer.GetTitleHitBounds(viewport).Contains(screenPosition)
+            || DiagramTabRenderer.GetTabBarBounds(viewport).Contains(screenPosition)
+            || SubstateBreadcrumbRenderer.GetBreadcrumbBounds(viewport).Contains(screenPosition)
+            || IsMouseOverMiniMap(screenPosition)
+            || IsMouseOverInspectorPanel(screenPosition))
+        {
+            return false;
+        }
+
+        var worldPosition = ScreenToWorld(screenPosition.ToVector2());
+        return FindNodeAt(worldPosition) is null
+            && FindTransitionLabelAt(worldPosition) is null
+            && FindTransitionAt(worldPosition) is null
+            && FindTransitionHandleAt(worldPosition).Transition is null;
+    }
+
+    private bool IsMouseOverMiniMap(Point screenPosition)
+        => TryGetMiniMapBounds(GraphicsDevice.Viewport, out var bounds)
+            && bounds.Contains(screenPosition);
+
+    private bool IsMouseOverInspectorPanel(Point screenPosition)
+    {
+        var content = BuildInspectorPanelContent();
+        return InspectorPanelRenderer.TryGetPanelBounds(GraphicsDevice.Viewport, content.Lines.Count, out var bounds)
+            && bounds.Contains(screenPosition);
+    }
+
     private bool TryBeginMiniMapDrag(Vector2 screenMousePosition)
     {
         if (!TryGetMiniMapBounds(GraphicsDevice.Viewport, out var bounds)
