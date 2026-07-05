@@ -12,9 +12,20 @@ public partial class Game1
 {
     private const int RecentFileMenuMaxItems = AppConfig.MaxRecentFiles;
 
+    /// <summary>
+    /// ファイルメニュー表示中
+    /// </summary>
     private bool _isFileMenuOpen;
+
+    /// <summary>
+    /// 最近開いたファイルのリスト表示中
+    /// </summary>
     private bool _isStartupFileMenu;
 
+    /// <summary>
+    /// ファイルメニュー表示
+    /// </summary>
+    /// <param name="isStartup"></param>
     private void OpenFileMenu(bool isStartup)
     {
         _isFileMenuOpen = true;
