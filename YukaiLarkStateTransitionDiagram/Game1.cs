@@ -226,7 +226,7 @@ public partial class Game1 : Game
             _isEditingFileName,
             _fileNameTextBoxController.GetDisplayText(),
             _fileNameTextBoxController.GetDisplayCaretIndex(),
-            ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0,
+            _fileNameTextBoxController.IsCaretNavigationKeyHeld || ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0,
             _fileNameEditWarning);
         DrawThemeButton(GraphicsDevice.Viewport);
         _diagramTabRenderer.DrawTabs(
@@ -237,7 +237,7 @@ public partial class Game1 : Game
             _isEditingDiagramTabName,
             _textBoxController.GetDisplayText(),
             _textBoxController.GetDisplayCaretIndex(),
-            ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0);
+            _textBoxController.IsCaretNavigationKeyHeld || ((int)(gameTime.TotalGameTime.TotalSeconds * 2)) % 2 == 0);
         _substateBreadcrumbRenderer.DrawBreadcrumb(
             GraphicsDevice.Viewport,
             BuildSubstateBreadcrumbPath(),

@@ -156,7 +156,7 @@ public partial class Game1
     {
         var editingDisplayLabel = GetEditingDisplayLabel();
         var editingDisplayCaretIndex = GetEditingDisplayCaretIndex();
-        var showEditingCaret = ((int)(totalGameTime.TotalSeconds * 2)) % 2 == 0;
+        var showEditingCaret = _textBoxController.IsCaretNavigationKeyHeld || ((int)(totalGameTime.TotalSeconds * 2)) % 2 == 0;
         if (includeInteraction)
         {
             DrawTransitionGhost(totalGameTime);

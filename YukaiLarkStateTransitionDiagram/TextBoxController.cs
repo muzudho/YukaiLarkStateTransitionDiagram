@@ -49,6 +49,8 @@ public sealed class TextBoxController
     /// </summary>
     public bool HasComposition => !string.IsNullOrEmpty(_compositionText);
 
+    public bool IsCaretNavigationKeyHeld { get; private set; }
+
     /// <summary>
     /// テキストボックスの入力を開始します。
     /// </summary>
@@ -58,6 +60,7 @@ public sealed class TextBoxController
         Text = text;
         CaretIndex = Text.Length;
         _compositionText = string.Empty;
+        IsCaretNavigationKeyHeld = false;
         ResetCaretKeyRepeat();
     }
 
@@ -69,6 +72,7 @@ public sealed class TextBoxController
         Text = string.Empty;
         CaretIndex = 0;
         _compositionText = string.Empty;
+        IsCaretNavigationKeyHeld = false;
         ResetCaretKeyRepeat();
     }
 
@@ -129,9 +133,12 @@ public sealed class TextBoxController
     {
         if (HasComposition)
         {
+            IsCaretNavigationKeyHeld = false;
             ResetCaretKeyRepeat();
             return TextBoxKeyboardAction.None;
         }
+
+        IsCaretNavigationKeyHeld = keyboard.IsKeyDown(Keys.Left) || keyboard.IsKeyDown(Keys.Right);
 
         if (IsNewKeyPress(keyboard, previousKeyboard, Keys.Enter))
         {
