@@ -1,7 +1,7 @@
 # 【むずでょ個人専用】Codex設定方法
 
 
-## リポジトリーの信用
+## Codex CLI のローカル設定
 
 以下のコマンドで、設定ファイルを VSCode で開きます。  
 
@@ -24,7 +24,7 @@ trust_level = "trusted"
 👆　信用してるから Ok。  
 
 
-## Codex VSIX の設定
+## Codex VSIX （Codex 拡張）のローカル設定
 
 ```shell
 . code $env:LOCALAPPDATA\CodexVsix\settings.json
@@ -40,6 +40,8 @@ trust_level = "trusted"
 ```
 
 👆　今［full access］モードだから "danger-full-access" になってる。  
+もし［workspace］モードなら "workspace-write" になるはず。  
+もし［Read only］モードなら "read-only" になるはず。  
 
 
 ## 別の拡張の設定が混在
