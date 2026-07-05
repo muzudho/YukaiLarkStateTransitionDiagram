@@ -1,0 +1,44 @@
+Codex の書き込み権限を確認・復旧する手順
+
+1. まず Codex/IDE の現在の権限表示を確認する。
+   - file_system type="unrestricted" なら書き込み制限なし。
+   - workspace-write ならワークスペース内だけ書き込み可。
+   - read-only なら書き込み不可。
+
+2. Codex セッションを作り直した直後に、最初に test.txt 作成テストをする。
+   - ワークスペース直下に test.txt を作る。
+   - 中身を読む。
+   - test.txt を消す。
+   - これが通れば、そのセッションでは書き込み経路が有効。
+
+3. 書き込めない時は、IDE で開いているフォルダを確認する。
+   - 開くべきフォルダ:
+     E:\github.com\muzudho\YukaiLarkStateTransitionDiagram
+   - 親フォルダや子フォルダを開いていると、Codex の project 判定がずれることがある。
+
+4. Codex/IDE を完全に再起動する。
+   - ウィンドウを閉じるだけでなく、必要なら IDE プロセスも終了する。
+   - その後、正しいリポジトリフォルダを開き直す。
+
+5. Codex の sandbox / filesystem / approval 設定を確認する。
+   - 書き込みしたいなら workspace-write 以上。
+   - 全域許可したいなら unrestricted。
+   - approval policy: never の場合、許可確認が必要な操作は即拒否されることがある。
+
+6. 友人が触った可能性がある場所を確認する。
+   - VS Code / IDE の workspace 設定。
+   - Codex 拡張の設定。
+   - Codex CLI の起動オプション。
+   - .vscode/settings.json。
+   - ユーザー設定の sandbox / approval 関連項目。
+
+7. 設定を直したら、もう一度 test.txt 作成テストをする。
+   - 作成・読み取り・削除ができれば復旧。
+   - writing outside of the project が出るなら project root 判定のずれ。
+   - blocked by policy が出るなら Codex ツール側の実行ポリシー制限。
+
+8. 今回の状態メモ。
+   - 以前は workspace-write 表示でも apply_patch が writing outside of the project で拒否された。
+   - PowerShell の New-Item も blocked by policy で拒否された。
+   - その後、現在の環境表示は danger-full-access / unrestricted になっている。
+   - つまり、現時点では前より正常な書き込み状態に戻っている可能性が高い。
