@@ -126,6 +126,7 @@ public partial class Game1 : Game
 
         UpdateExportPhotoEffect(gameTime);
 
+        // ファイルメニューオープン時
         if (_isFileMenuOpen)
         {
             HandleFileMenuKeyboard(keyboard);
@@ -137,6 +138,7 @@ public partial class Game1 : Game
             return;
         }
 
+        // テーマメニューオープン時
         if (_isThemeMenuOpen)
         {
             HandleThemeMenuKeyboard(keyboard);
@@ -148,6 +150,7 @@ public partial class Game1 : Game
             return;
         }
 
+        // サブステート・リンクメニューオープン時
         if (_isSubstateLinkMenuOpen)
         {
             HandleSubstateLinkMenuKeyboard(keyboard);
@@ -158,6 +161,8 @@ public partial class Game1 : Game
             base.Update(gameTime);
             return;
         }
+
+        // カラーパレット・オープン時
         if (_isColorPaletteOpen)
         {
             HandleColorPaletteKeyboard(keyboard);
@@ -172,9 +177,11 @@ public partial class Game1 : Game
             base.Update(gameTime);
             return;
         }
+
         // ［開始マーク作成アシスト］の起動判定
         _status = _yukaiLarkAssistant.Update(gameTime, CreateAssistantContext(), _status, DefaultStatus);
 
+        // エクスポート選択中
         if (_isExportSelecting)
         {
             HandleExportSelectionKeyboard(keyboard);
@@ -183,6 +190,7 @@ public partial class Game1 : Game
                 HandleExportSelectionMouse(keyboard, mouse);
             }
         }
+        // ファイル名編集中
         else if (_isEditingFileName)
         {
             _fileNameTextBoxController.UpdateImeComposition();
@@ -192,6 +200,7 @@ public partial class Game1 : Game
                 HandleTextEditingMouse(mouse);
             }
         }
+        // ダイアグラムタブ名編集中
         else if (_isEditingDiagramTabName)
         {
             _textBoxController.UpdateImeComposition();
@@ -201,6 +210,7 @@ public partial class Game1 : Game
                 HandleTextEditingMouse(mouse);
             }
         }
+        // ラベル編集中
         else if (IsEditingLabel)
         {
             _textBoxController.UpdateImeComposition();
@@ -210,6 +220,7 @@ public partial class Game1 : Game
                 HandleTextEditingMouse(mouse);
             }
         }
+        // ニュートラル中
         else
         {
             _textBoxController.Clear();
@@ -220,11 +231,13 @@ public partial class Game1 : Game
             HandleKeyboard(keyboard, mouse);
             HandleMouse(keyboard, mouse);
         }
+
         UpdateMouseCursor(keyboard, mouse);
         _previousKeyboard = keyboard;
         _previousMouse = mouse;
         base.Update(gameTime);
     }
+
     protected override void Draw(GameTime gameTime)
     {
         GraphicsDevice.Clear(_boardTheme.BackgroundColor);

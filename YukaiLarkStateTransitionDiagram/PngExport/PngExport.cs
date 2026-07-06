@@ -454,16 +454,10 @@ public partial class Game1
 
     private void DrawExportSelectionOverlay()
     {
-        if (!_isExportSelecting || (!_hasExportSelection && !_exportSelectionDragging))
-        {
-            return;
-        }
+        if (!_isExportSelecting || (!_hasExportSelection && !_exportSelectionDragging)) return;
 
         var rectangle = GetExportSelectionRectangle();
-        if (rectangle.Width <= 0 || rectangle.Height <= 0)
-        {
-            return;
-        }
+        if (rectangle.Width <= 0 || rectangle.Height <= 0) return;
 
         DrawExportPhotoFrame(new Rectangle(0, 0, GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height), rectangle, fillBackdrop: false, fillImageArea: false);
         DrawExportPhotoTop(rectangle);
