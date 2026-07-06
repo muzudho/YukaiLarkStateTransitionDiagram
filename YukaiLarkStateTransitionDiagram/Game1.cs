@@ -17,10 +17,9 @@ using Microsoft.Xna.Framework.Input;
 public partial class Game1 : Game
 {
     private const string AppTitle = "YukaiLark State Transition Diagram";
-    private const int MiniMapWidth = 266;
-    private const int MiniMapHeight = 118;
-    private const int MiniMapRightMargin = 12;
-    private const int MiniMapBottomMargin = 64;
+    private static readonly UiElementLayout MiniMapLayoutSpec = new(
+        new UiSize(266, 118),
+        UiMargin.FromRightBottom(12, 64));
     private const int MaxDiagramTextLength = 80;
     private const int MaxFileNameLength = 255;
     private const float MinCameraZoom = 0.25f;
@@ -450,9 +449,9 @@ public partial class Game1 : Game
             return false;
         }
 
-        var x = viewport.Width - MiniMapWidth - MiniMapRightMargin;
-        var y = viewport.Height - MiniMapHeight - MiniMapBottomMargin;
-        bounds = new Rectangle(x, Math.Max(SubstateBreadcrumbRenderer.BreadcrumbTop + SubstateBreadcrumbRenderer.BreadcrumbHeight, y), MiniMapWidth, MiniMapHeight);
+        bounds = MiniMapLayoutSpec.GetBottomRightBounds(
+            viewport,
+            SubstateBreadcrumbRenderer.BreadcrumbTop + SubstateBreadcrumbRenderer.BreadcrumbHeight);
         return true;
     }
 
