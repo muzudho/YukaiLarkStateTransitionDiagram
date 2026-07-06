@@ -119,118 +119,21 @@ public partial class Game1 : Game
     {
         var keyboard = Keyboard.GetState();
         var mouse = Mouse.GetState();
-        if (!_isEditingFileName && !_isEditingDiagramTabName && !IsEditingLabel)
+        var interactionState = GetCurrentInteractionState();
+
+        if (!interactionState.UsesTextInput(this))
         {
             EnsureImeClosedForShortcutInput();
         }
 
         UpdateExportPhotoEffect(gameTime);
 
-        // ファイルメニューオープン時
-        if (_isFileMenuOpen)
+        if (interactionState.UpdatesAssistantBeforeInput)
         {
-            HandleFileMenuKeyboard(keyboard);
-            HandleFileMenuMouse(mouse);
-            UpdateMouseCursor(keyboard, mouse);
-            _previousKeyboard = keyboard;
-            _previousMouse = mouse;
-            base.Update(gameTime);
-            return;
+            _status = _yukaiLarkAssistant.Update(gameTime, CreateAssistantContext(), _status, DefaultStatus);
         }
 
-        // テーマメニューオープン時
-        if (_isThemeMenuOpen)
-        {
-            HandleThemeMenuKeyboard(keyboard);
-            HandleThemeMenuMouse(mouse);
-            UpdateMouseCursor(keyboard, mouse);
-            _previousKeyboard = keyboard;
-            _previousMouse = mouse;
-            base.Update(gameTime);
-            return;
-        }
-
-        // サブステート・リンクメニューオープン時
-        if (_isSubstateLinkMenuOpen)
-        {
-            HandleSubstateLinkMenuKeyboard(keyboard);
-            HandleSubstateLinkMenuMouse(mouse);
-            UpdateMouseCursor(keyboard, mouse);
-            _previousKeyboard = keyboard;
-            _previousMouse = mouse;
-            base.Update(gameTime);
-            return;
-        }
-
-        // カラーパレット・オープン時
-        if (_isColorPaletteOpen)
-        {
-            HandleColorPaletteKeyboard(keyboard);
-            var paletteConsumedMouse = HandleColorPaletteMouse(mouse);
-            if (_isColorPaletteOpen && !paletteConsumedMouse)
-            {
-                HandleMouse(keyboard, mouse);
-            }
-            UpdateMouseCursor(keyboard, mouse);
-            _previousKeyboard = keyboard;
-            _previousMouse = mouse;
-            base.Update(gameTime);
-            return;
-        }
-
-        // ［開始マーク作成アシスト］の起動判定
-        _status = _yukaiLarkAssistant.Update(gameTime, CreateAssistantContext(), _status, DefaultStatus);
-
-        // エクスポート選択中
-        if (_isExportSelecting)
-        {
-            HandleExportSelectionKeyboard(keyboard);
-            if (_isExportSelecting)
-            {
-                HandleExportSelectionMouse(keyboard, mouse);
-            }
-        }
-        // ファイル名編集中
-        else if (_isEditingFileName)
-        {
-            _fileNameTextBoxController.UpdateImeComposition();
-            HandleFileNameEditingKeyboard(keyboard, gameTime);
-            if (_isEditingFileName)
-            {
-                HandleTextEditingMouse(mouse);
-            }
-        }
-        // ダイアグラムタブ名編集中
-        else if (_isEditingDiagramTabName)
-        {
-            _textBoxController.UpdateImeComposition();
-            HandleDiagramTabNameEditingKeyboard(keyboard, gameTime);
-            if (_isEditingDiagramTabName)
-            {
-                HandleTextEditingMouse(mouse);
-            }
-        }
-        // ラベル編集中
-        else if (IsEditingLabel)
-        {
-            _textBoxController.UpdateImeComposition();
-            HandleLabelEditingKeyboard(keyboard, gameTime);
-            if (IsEditingLabel)
-            {
-                HandleTextEditingMouse(mouse);
-            }
-        }
-        // ニュートラル中
-        else
-        {
-            _textBoxController.Clear();
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
-            {
-                Exit();
-            }
-            HandleKeyboard(keyboard, mouse);
-            HandleMouse(keyboard, mouse);
-        }
+        interactionState.Update(this, keyboard, mouse, gameTime);
 
         UpdateMouseCursor(keyboard, mouse);
         _previousKeyboard = keyboard;
